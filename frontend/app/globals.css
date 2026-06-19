@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #0a0a0a;
+  color: #f5f5f5;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #444; }
+
+/* Markdown prose */
+.prose { color: inherit; max-width: none; }
+.prose p { margin: 0.4em 0; }
+.prose code {
+  background: #1e1e2e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: #a5b4fc;
+}
+.prose pre {
+  background: #1e1e2e;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+.prose pre code { background: none; padding: 0; color: inherit; }
+.prose a { color: #60a5fa; text-decoration: underline; }
+.prose strong { color: #fff; }
+.prose h1, .prose h2, .prose h3 { color: #fff; margin: 0.75em 0 0.4em; }
+.prose ul, .prose ol { padding-left: 1.5em; }
+.prose li { margin: 0.2em 0; }
+.prose blockquote {
+  border-left: 3px solid #3b3b5c;
+  padding-left: 1em;
+  color: #9ca3af;
+  margin: 0.5em 0;
+}
+.prose table { width: 100%; border-collapse: collapse; font-size: 0.875em; }
+.prose th, .prose td { border: 1px solid #2a2a3a; padding: 0.5em 0.75em; text-align: left; }
+.prose th { background: #1a1a2e; color: #e2e8f0; }
