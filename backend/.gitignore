@@ -1,0 +1,35 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Uploads (keep the placeholder)
+uploads/*
+!uploads/.gitkeep
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# HuggingFace / SentenceTransformers model cache
+.cache/
+~/.cache/huggingface/
+
+# Alembic
+# (versions/ IS committed — migrations are source-controlled)
+
+# IDE
+.vscode/
+.idea/
+*.iml
