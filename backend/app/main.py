@@ -11,6 +11,7 @@ from app.api import (
     documents_router,
     chat_router,
     auth_router,
+    retrieve_router,
 )
 
 settings = get_settings()
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(documents_router, tags=["Documents"])
     app.include_router(chat_router, tags=["Chat"])
     app.include_router(auth_router, tags=["Auth"])
+    app.include_router(retrieve_router, tags=["Retrieval"])
 
     return app
 

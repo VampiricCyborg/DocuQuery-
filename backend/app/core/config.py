@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     embedding_model: str = "BAAI/bge-base-en-v1.5"
     embedding_batch_size: int = 32
 
+    # Retrieval
+    retrieval_top_k: int = 5
+    retrieval_similarity_threshold: float = 0.30
+    retrieval_max_context_chunks: int = 10
+    retrieval_vector_distance: str = "cosine"  # reserved for Phase 6
+
     @property
     def allowed_ext_set(self) -> set[str]:
         return {ext.strip().lower() for ext in self.allowed_extensions.split(",")}
