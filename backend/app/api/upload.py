@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, UploadFile, File, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
@@ -8,6 +8,8 @@ from app.schemas import DocumentOut
 from app.services.document_service import save_document
 from app.ingestion.pipeline import run_ingestion_pipeline
 from app.database.session import AsyncSessionLocal
+from app.core.middleware import limiter
+from app.core.config import get_settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -20,7 +22,9 @@ async def _run_pipeline_with_own_session(document_id: str, storage_path: str, fi
 
 
 @router.post("/upload", response_model=DocumentOut, status_code=201)
+@limiter.limit(lambda: get_settings().rate_limit_upload)
 async def upload_file(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),

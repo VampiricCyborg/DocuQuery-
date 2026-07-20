@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import type { FileAttachment } from "@/types"
 import { generateId } from "@/lib/utils"
-import { fileService } from "@/services/mock"
+import { documentApi } from "@/services/api"
 
 interface FileStore {
   files: FileAttachment[]
@@ -20,11 +20,14 @@ export const useFileStore = create<FileStore>()((set) => ({
 
     set(s => ({ files: [entry, ...s.files] }))
 
-    await fileService.uploadFile(file, (progress) => {
-      set(s => ({ files: s.files.map(f => f.id === id ? { ...f, progress } : f) }))
-    })
-
-    set(s => ({ files: s.files.map(f => f.id === id ? { ...f, status: "ready", progress: 100 } : f) }))
+    try {
+      await documentApi.upload(file, (progress) => {
+        set(s => ({ files: s.files.map(f => f.id === id ? { ...f, progress } : f) }))
+      })
+      set(s => ({ files: s.files.map(f => f.id === id ? { ...f, status: "ready", progress: 100 } : f) }))
+    } catch {
+      set(s => ({ files: s.files.map(f => f.id === id ? { ...f, status: "error" } : f) }))
+    }
   },
 
   removeFile: (id) => set(s => ({ files: s.files.filter(f => f.id !== id) })),

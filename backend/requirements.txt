@@ -29,7 +29,14 @@ langchain-text-splitters==1.1.2
 # --- Embeddings ---
 sentence-transformers==5.4.1
 
-# --- Testing ---
+# --- Rate limiting ---
+slowapi==0.1.9
 pytest==9.1.1
 pytest-asyncio==1.4.0
 httpx==0.28.1
+
+# --- LLM providers ---
+groq==0.13.1
+openai==1.57.4
+anthropic==0.40.0
+google-generativeai==0.8.3

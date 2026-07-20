@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import type { Conversation, Message } from "@/types"
 import { generateId } from "@/lib/utils"
-import { chatService } from "@/services/mock"
+import { chatApi } from "@/services/api"
 
 interface ChatStore {
   conversations: Conversation[]
@@ -97,7 +97,10 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
     }
 
     try {
-      for await (const chunk of chatService.streamMessage(content)) {
+      for await (const chunk of chatApi.stream(content)) {
+        if (chunk === "[DONE]") break
+        // Skip citation and error events — handle in a future phase
+        if (chunk.startsWith("event:")) continue
         updateAiContent(chunk)
       }
       set(s => ({
