@@ -2,10 +2,10 @@
 
 ### Enterprise RAG Platform — Intelligent Document Intelligence
 
-> A production-grade, full-stack AI assistant platform for private document fleets — featuring real-time streaming, intelligent document ingestion, vector search, multi-agent orchestration, and voice I/O.
+> A production-grade, full-stack AI assistant platform for private document fleets — featuring real-time streaming, intelligent document ingestion, vector search, LLM-powered answers, and voice I/O.
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.13-3776ab?style=flat-square&logo=python)
@@ -25,9 +25,9 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 
 - **Intelligent ingestion** — parse, clean, chunk, embed, and index documents automatically on upload
 - **Vector knowledge base** — PostgreSQL + pgvector with HNSW indexing for fast similarity search
-- **RAG pipelines** — retrieve grounded answers directly from your own documents _(Phase 4)_
-- **Multi-agent orchestration** — route tasks to specialized agents _(Phase 9)_
-- **Real-time streaming** — token-by-token AI responses with live typing indicators _(Phase 5)_
+- **RAG pipeline** — retrieve grounded answers directly from your own documents
+- **LLM integration** — streaming answers via Groq, OpenAI, Anthropic, Gemini, or Ollama
+- **Real-time streaming** — token-by-token AI responses with live typing indicators
 - **Multimodal input** — chat, voice, and file uploads in a single interface
 
 ---
@@ -39,8 +39,9 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | 1 | Frontend UI | ✅ Complete |
 | 2 | Backend Foundation | ✅ Complete |
 | 3 | Intelligent Document Ingestion | ✅ Complete |
-| 4 | Retrieval Engine | 🔜 Next |
-| 5 | LLM Integration | ⏳ Planned |
+| 4 | Retrieval Engine | ✅ Complete |
+| 5 | LLM Integration & Streaming | ✅ Complete |
+| — | Pre-launch Hardening | ✅ Complete |
 | 6 | Hybrid Retrieval + BM25 | ⏳ Planned |
 | 7 | Reranking | ⏳ Planned |
 | 8 | Authentication & RBAC | ⏳ Planned |
@@ -57,7 +58,12 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | 🔍 **Auto-Indexing** | Parse → clean → chunk → embed → store on upload | ✅ |
 | 🧮 **Vector Store** | pgvector HNSW index, 768-dim embeddings | ✅ |
 | 📊 **Processing Status** | `uploaded → processing → indexed → failed` lifecycle | ✅ |
-| 🔴 **Streaming Chat** | Token-by-token AI responses (UI ready, LLM in Phase 5) | ✅ UI |
+| 🤖 **RAG Chat** | Grounded answers from your documents, never hallucinated | ✅ |
+| 🔴 **Streaming Responses** | Token-by-token SSE streaming with citations | ✅ |
+| 🔌 **Multi-Provider LLM** | Groq, OpenAI, Anthropic, Gemini, Ollama — swap via config | ✅ |
+| 📎 **Citations** | Every answer links back to source document, page, chunk | ✅ |
+| 🛡️ **Rate Limiting** | Per-IP limits on upload and chat endpoints | ✅ |
+| 🔒 **Security Headers** | X-Frame-Options, CSP, XSS protection on every response | ✅ |
 | 🤖 **AI Agent Selector** | Switch between specialized agents per conversation | ✅ UI |
 | 🎙️ **Voice Input** | Web Speech API with animated waveform | ✅ UI |
 | 📌 **Chat Management** | Pin, search, delete, auto-title conversations | ✅ UI |
@@ -99,7 +105,10 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | **DOCX Parsing** | [python-docx](https://python-docx.readthedocs.io/) |
 | **Chunking** | [LangChain Text Splitters](https://python.langchain.com/) |
 | **Embeddings** | [SentenceTransformers](https://sbert.net/) — `BAAI/bge-base-en-v1.5` |
+| **LLM Providers** | [Groq](https://groq.com/) · [OpenAI](https://openai.com/) · [Anthropic](https://anthropic.com/) · [Gemini](https://deepmind.google/technologies/gemini/) · [Ollama](https://ollama.com/) |
+| **Rate Limiting** | [slowapi](https://github.com/laurentS/slowapi) |
 | **Containerization** | [Docker](https://docker.com/) + [Docker Compose](https://docs.docker.com/compose/) |
+| **Deployment** | [Railway](https://railway.app/) (backend) · [Vercel](https://vercel.com/) (frontend) |
 | **Testing** | [pytest](https://pytest.org/) + pytest-asyncio |
 
 ---
@@ -114,7 +123,9 @@ DocuQuery/
 │   │   └── (dashboard)/        # chat, dashboard, files, agents, settings
 │   ├── components/             # UI component library
 │   ├── stores/                 # Zustand state stores
-│   ├── services/               # Mock API service layer
+│   ├── services/
+│   │   ├── api.ts              # Real backend API client
+│   │   └── mock.ts             # Mock data for local dev without backend
 │   └── types/                  # Shared TypeScript types
 │
 └── backend/                    # FastAPI + Python 3.13
@@ -123,10 +134,11 @@ DocuQuery/
     │   │   ├── health.py
     │   │   ├── upload.py       # Upload + triggers ingestion pipeline
     │   │   ├── documents.py    # CRUD + chunk inspector
-    │   │   ├── chat.py         # Stub (Phase 5)
+    │   │   ├── chat.py         # Full RAG pipeline + SSE streaming
+    │   │   ├── retrieve.py     # POST /retrieve — retrieval only
     │   │   ├── auth.py         # Stub (Phase 8)
     │   │   └── dependencies.py
-    │   ├── core/               # Config, logging, security
+    │   ├── core/               # Config, logging, security, middleware
     │   ├── database/           # Models, session, base, migrations
     │   ├── ingestion/          # Full ingestion pipeline
     │   │   ├── parser.py       # PDF / DOCX / TXT / MD extraction
@@ -136,12 +148,28 @@ DocuQuery/
     │   │   ├── vector_store.py # pgvector persistence
     │   │   ├── metadata.py     # Document metadata extraction
     │   │   └── pipeline.py     # Orchestrator
+    │   ├── retrieval/          # Retrieval engine
+    │   │   ├── retrieval_pipeline.py
+    │   │   ├── vector_search.py
+    │   │   ├── context_builder.py
+    │   │   ├── citations.py
+    │   │   ├── scoring.py
+    │   │   ├── filters.py
+    │   │   └── embedding_query.py
+    │   ├── llm/                # LLM integration layer
+    │   │   ├── providers/      # Groq, OpenAI, Anthropic, Gemini, Ollama
+    │   │   ├── response_generator.py
+    │   │   ├── prompts.py
+    │   │   ├── stream.py
+    │   │   ├── models.py
+    │   │   └── exceptions.py
     │   ├── schemas/            # Pydantic request/response models
     │   └── services/           # Business logic
     ├── migrations/             # Alembic migrations
-    ├── tests/                  # pytest test suite (19 tests)
+    ├── tests/                  # pytest test suite (68 tests)
     ├── Dockerfile
     ├── docker-compose.yml
+    ├── railway.json
     └── requirements.txt
 ```
 
@@ -155,6 +183,7 @@ DocuQuery/
 - **Python** `>= 3.13` — [Download](https://python.org/)
 - **Docker Desktop** — [Download](https://www.docker.com/products/docker-desktop/)
 - **Git** — [Download](https://git-scm.com/)
+- **Groq API Key** — [Get one free](https://console.groq.com/)
 
 ---
 
@@ -166,13 +195,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The root route redirects to `/login`.
-
-**Demo credentials** (mock mode — no backend required):
-```
-Email:    madhav@example.com
-Password: any string
-```
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
@@ -182,38 +205,33 @@ Password: any string
 
 ```bash
 cd backend
+cp .env.example .env
+# Edit .env — set your LLM_API_KEY and DATABASE_URL
 docker compose up --build
 ```
 
-On first run, apply the database migrations:
+On first run, apply migrations:
 
 ```bash
 docker compose exec api python -m alembic upgrade head
 ```
 
-The API is available at [http://localhost:8000](http://localhost:8000).
-Interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+API available at [http://localhost:8000](http://localhost:8000).
+Interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs) _(only when `DEBUG=true`)_.
 
 #### Option B — Local
 
 ```bash
 cd backend
-
-# Create and activate a virtual environment
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 # source .venv/bin/activate   # macOS/Linux
 
 pip install -r requirements.txt
-
-# Copy and configure environment
 cp .env.example .env
-# Edit .env — set DATABASE_URL to your local PostgreSQL instance
+# Edit .env
 
-# Apply migrations
 python -m alembic upgrade head
-
-# Start the server
 uvicorn app.main:app --reload
 ```
 
@@ -226,10 +244,17 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 ```env
 # App
 APP_NAME=DocuQuery
-APP_VERSION=0.1.0
+APP_VERSION=0.5.0
 DEBUG=false
 
-# Database (Docker default)
+# CORS — comma-separated allowed origins
+ALLOWED_ORIGINS=http://localhost:3000
+
+# Rate limiting
+RATE_LIMIT_UPLOAD=10/minute
+RATE_LIMIT_CHAT=30/minute
+
+# Database
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/docuquery
 
 # File Storage
@@ -242,6 +267,16 @@ CHUNK_SIZE=800
 CHUNK_OVERLAP=120
 EMBEDDING_MODEL=BAAI/bge-base-en-v1.5
 EMBEDDING_BATCH_SIZE=32
+
+# LLM
+LLM_PROVIDER=groq
+LLM_MODEL=llama-3.3-70b-versatile
+LLM_TEMPERATURE=0.1
+LLM_MAX_TOKENS=1024
+LLM_MAX_CONTEXT_TOKENS=3000
+LLM_STREAMING_ENABLED=true
+LLM_TIMEOUT=30.0
+LLM_API_KEY=<your-groq-api-key>
 ```
 
 ---
@@ -256,16 +291,15 @@ EMBEDDING_BATCH_SIZE=32
 | `GET` | `/documents/{id}` | Get a single document by ID |
 | `GET` | `/documents/{id}/chunks` | Inspect indexed chunks for a document |
 | `DELETE` | `/documents/{id}` | Delete document and all its chunks |
-| `POST` | `/chat` | Chat endpoint _(stub — wired in Phase 5)_ |
+| `POST` | `/retrieve` | Vector similarity search — returns chunks + context |
+| `POST` | `/chat` | Full RAG pipeline — streams answer + citations |
 | `GET` | `/auth/me` | Auth endpoint _(stub — wired in Phase 8)_ |
 
-Full interactive documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+Interactive docs available at `/docs` when `DEBUG=true`.
 
 ---
 
 ## 🔄 Ingestion Pipeline
-
-When a document is uploaded, the following pipeline runs automatically in the background:
 
 ```
 POST /upload
@@ -285,12 +319,10 @@ Parse document
      │
      ▼  status: PROCESSING
 Clean text
-  (normalize whitespace, preserve paragraphs + headings)
      │
      ▼
 Chunk text
   (RecursiveCharacterTextSplitter, 800 tokens / 120 overlap)
-  (each chunk carries: doc_id, filename, page, section, index)
      │
      ▼
 Generate embeddings
@@ -304,7 +336,66 @@ Store vectors
 Update metadata  ──►  status: INDEXED
 ```
 
-On any failure at any stage: `status: FAILED`
+---
+
+## 💬 RAG Chat Pipeline
+
+```
+POST /chat  { "message": "How many leave days do employees get?" }
+     │
+     ▼
+Embed query  (BAAI/bge-base-en-v1.5)
+     │
+     ▼
+Vector search  (pgvector cosine similarity, top-k chunks)
+     │
+     ▼
+Score + deduplicate + rank chunks
+     │
+     ▼
+Build context  (structured text block, max token budget)
+     │
+     ▼
+Construct prompt  (versioned system prompt + context + question)
+     │
+     ▼
+LLM generation  (Groq / OpenAI / Anthropic / Gemini / Ollama)
+     │
+     ▼
+Stream response  (SSE: token events → citations event → [DONE])
+```
+
+Response format:
+```json
+{
+  "answer": "Employees receive 20 annual leave days.",
+  "citations": [
+    { "filename": "Employee Handbook.pdf", "page": 14, "chunk_index": 18 }
+  ],
+  "model": "llama-3.3-70b-versatile"
+}
+```
+
+---
+
+## 🚢 Deployment
+
+### Backend — Railway
+
+1. New Project → Deploy from GitHub → set root to `backend`
+2. Add PostgreSQL service (use `pgvector/pgvector:pg16` image)
+3. Set environment variables in Railway dashboard
+4. Run migrations: `python -m alembic upgrade head`
+
+### Frontend — Vercel
+
+Set one environment variable in Vercel dashboard:
+
+```
+NEXT_PUBLIC_API_URL=https://your-railway-app.railway.app
+```
+
+Then redeploy.
 
 ---
 
@@ -325,12 +416,13 @@ On any failure at any stage: `status: FAILED`
 - [x] Document ingestion pipeline (parse, clean, chunk, embed)
 - [x] Vector store — PostgreSQL + pgvector + HNSW index
 - [x] Alembic migrations
-- [ ] **Phase 4** — Retrieval engine (similarity search, top-k, filters)
-- [ ] **Phase 5** — LLM integration (OpenAI GPT-4o / Anthropic Claude)
-- [ ] **Phase 6** — Hybrid retrieval + BM25
-- [ ] **Phase 7** — Reranking (Cohere / cross-encoder)
+- [x] **Phase 4** — Retrieval engine (similarity search, top-k, filters, citations)
+- [x] **Phase 5** — LLM integration (Groq, OpenAI, Anthropic, Gemini, Ollama)
+- [x] **Pre-launch** — Security headers, rate limiting, production hardening
+- [ ] **Phase 6** — Hybrid retrieval + BM25 + Reciprocal Rank Fusion
+- [ ] **Phase 7** — Reranking (BGE cross-encoder)
 - [ ] **Phase 8** — JWT authentication + RBAC
-- [ ] **Phase 9** — Agentic RAG (Celery task queue, multi-agent orchestration)
+- [ ] **Phase 9** — Agentic RAG (LangGraph, multi-agent orchestration)
 - [ ] **Phase 10** — Multimodal RAG (OCR, images, tables)
 
 ---
@@ -342,9 +434,9 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-Current test suite: **19 tests, 0 failures**
+Current test suite: **68 tests, 0 failures**
 
-Covers: text cleaner, document parser (TXT/MD), chunker, metadata extraction, pipeline orchestration (success + failure paths).
+Covers: text cleaner, document parser, chunker, metadata extraction, pipeline orchestration, retrieval scoring, citations, context builder, filters, LLM prompt construction, provider abstraction, response generator, streaming, failure paths.
 
 ---
 
@@ -383,4 +475,6 @@ MIT License — Copyright (c) 2025 Madhav
 - [**pgvector**](https://github.com/pgvector/pgvector) — vector similarity search for PostgreSQL
 - [**BAAI**](https://huggingface.co/BAAI/bge-base-en-v1.5) — `bge-base-en-v1.5` embedding model
 - [**LangChain**](https://python.langchain.com/) — text splitting utilities
-- [**OpenAI**](https://openai.com/) and [**Anthropic**](https://anthropic.com/) — LLM APIs powering the production RAG engine _(Phase 5)_
+- [**Groq**](https://groq.com/) — default LLM provider, ultra-fast inference
+- [**OpenAI**](https://openai.com/) and [**Anthropic**](https://anthropic.com/) — LLM APIs
+- [**Railway**](https://railway.app/) — backend deployment platform
