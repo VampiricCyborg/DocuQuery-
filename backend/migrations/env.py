@@ -17,7 +17,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 settings = get_settings()
-_sync_url = settings.database_url.replace("+asyncpg", "+psycopg2")
+_sync_url = settings.async_database_url.replace("+asyncpg", "+psycopg2")
 
 
 def run_migrations_offline() -> None:
@@ -43,7 +43,7 @@ def do_run_migrations(connection):
 
 
 async def run_migrations_online() -> None:
-    engine = create_async_engine(settings.database_url, poolclass=pool.NullPool)
+    engine = create_async_engine(settings.async_database_url, poolclass=pool.NullPool)
     async with engine.connect() as conn:
         await conn.run_sync(do_run_migrations)
     await engine.dispose()

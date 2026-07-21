@@ -18,6 +18,13 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/docuquery"
 
+    @property
+    def async_database_url(self) -> str:
+        """Normalize Railway's postgresql:// to postgresql+asyncpg://."""
+        if self.database_url.startswith("postgresql://"):
+            return self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.database_url
+
     upload_dir: str = "uploads"
     max_file_size_mb: int = 50
     allowed_extensions: str = "pdf,docx,txt,md"

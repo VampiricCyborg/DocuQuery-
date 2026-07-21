@@ -11,7 +11,7 @@ class Base(DeclarativeBase):
 def build_engine() -> AsyncEngine:
     settings = get_settings()
     return create_async_engine(
-        settings.database_url,
+        settings.async_database_url,
         echo=settings.debug,
         pool_pre_ping=True,
     )
