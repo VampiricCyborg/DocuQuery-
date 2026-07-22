@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -54,7 +55,26 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins_list(self) -> list[str]:
-        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+        raw = self.allowed_origins.strip()
+        if not raw:
+            return []
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = raw
+
+        if isinstance(parsed, list):
+            candidates = parsed
+        else:
+            candidates = str(parsed).split(",")
+
+        origins: list[str] = []
+        for origin in candidates:
+            normalized = str(origin).strip().strip('"').strip("'").rstrip("/")
+            if normalized:
+                origins.append(normalized)
+        return origins
 
     @property
     def allowed_ext_set(self) -> set[str]:
