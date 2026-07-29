@@ -9,11 +9,10 @@ Pipeline:
 No prompt logic here — all business logic lives in app/llm/.
 """
 
-from __future__ import annotations
-
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,7 +39,7 @@ router = APIRouter()
 @limiter.limit(lambda: get_settings().rate_limit_chat)
 async def chat(
     request: Request,
-    body: ChatRequest,
+    chat_request: Annotated[ChatRequest, Body(...)],
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -54,9 +53,9 @@ async def chat(
     # --- Retrieval ---
     try:
         retrieval_result = await run_retrieval_pipeline(
-            query=body.message,
+            query=chat_request.message,
             db=db,
-            top_k=body.top_k,
+            top_k=chat_request.top_k,
             filters=None,
         )
     except (EmbeddingError, VectorSearchError) as exc:
@@ -74,7 +73,7 @@ async def chat(
             answer="I could not find relevant information in the available documents.",
             citations=[],
             model=settings.llm_model,
-            conversation_id=body.conversation_id,
+            conversation_id=chat_request.conversation_id,
         )
 
     generator = get_response_generator()
@@ -83,7 +82,7 @@ async def chat(
     if settings.llm_streaming_enabled:
         async def _stream():
             try:
-                async for event in generator.stream(body.message, retrieval_result):
+                async for event in generator.stream(chat_request.message, retrieval_result):
                     yield event
             except RateLimitError:
                 yield "event: error\ndata: Rate limit reached. Please try again shortly.\n\n"
@@ -99,7 +98,7 @@ async def chat(
 
     # --- Non-streaming path ---
     try:
-        llm_response = await generator.generate(body.message, retrieval_result)
+        llm_response = await generator.generate(chat_request.message, retrieval_result)
     except RateLimitError:
         raise HTTPException(status_code=429, detail="Rate limit reached. Please try again shortly.")
     except GenerationTimeoutError:
@@ -123,5 +122,5 @@ async def chat(
             for c in llm_response.citations
         ],
         model=llm_response.model,
-        conversation_id=body.conversation_id,
+        conversation_id=chat_request.conversation_id,
     )

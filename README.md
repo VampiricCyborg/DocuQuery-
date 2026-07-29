@@ -4,15 +4,19 @@
 
 > A production-grade, full-stack AI assistant platform for private document fleets — featuring real-time streaming, intelligent document ingestion, vector search, LLM-powered answers, and voice I/O.
 
+**Last Updated:** July 29, 2026
+
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.5.0-blue?style=flat-square)
-![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
+![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)
+![Next.js](https://img.shields.io/badge/Next.js-16.2-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-19.2-61dafb?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.13-3776ab?style=flat-square&logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115.5-009688?style=flat-square&logo=fastapi)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)
-![pgvector](https://img.shields.io/badge/pgvector-enabled-blueviolet?style=flat-square)
+![pgvector](https://img.shields.io/badge/pgvector-0.5.0-blueviolet?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-71%20passing-brightgreen?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
 
 ---
@@ -80,7 +84,7 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 
 | Category | Technology |
 |---|---|
-| **Framework** | [Next.js 15 (App Router)](https://nextjs.org/) |
+| **Framework** | [Next.js 16.2 (App Router)](https://nextjs.org/) |
 | **Language** | [TypeScript 5](https://www.typescriptlang.org/) |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) |
 | **UI Primitives** | [Radix UI](https://www.radix-ui.com/) |
@@ -117,37 +121,48 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 
 ```
 DocuQuery/
-├── frontend/                   # Next.js 15 App Router
+├── frontend/                   # Next.js 16.2 App Router
 │   ├── app/
 │   │   ├── (auth)/             # login, signup, forgot-password
 │   │   └── (dashboard)/        # chat, dashboard, files, agents, settings
 │   ├── components/             # UI component library
-│   ├── stores/                 # Zustand state stores
+│   │   ├── chat/               # ChatInput, ChatWindow, MessageBubble, ToolCallDisplay
+│   │   ├── sidebar/            # Sidebar, NavLinks, UserMenu
+│   │   ├── layout/             # TopBar, Providers
+│   │   ├── dashboard/          # StatsGrid, ActivityFeed
+│   │   ├── agents/             # AgentCard, AgentSelector
+│   │   ├── file-upload/        # FileUploadZone (react-dropzone)
+│   │   ├── voice/              # VoiceWaveform
+│   │   └── ui/                 # Button, Input, Badge, Tooltip, Skeleton, Avatar
+│   ├── hooks/                  # useVoice, useAutoScroll, useCopy, useKeyboardShortcuts
+│   ├── stores/                 # Zustand stores (chat, file, auth, ui)
 │   ├── services/
-│   │   ├── api.ts              # Real backend API client
+│   │   ├── api.ts              # Real backend API client (XHR upload + SSE streaming)
 │   │   └── mock.ts             # Mock data for local dev without backend
+│   ├── lib/                    # Utility functions
 │   └── types/                  # Shared TypeScript types
 │
 └── backend/                    # FastAPI + Python 3.13
     ├── app/
     │   ├── api/                # Route handlers
     │   │   ├── health.py
-    │   │   ├── upload.py       # Upload + triggers ingestion pipeline
+    │   │   ├── upload.py       # Upload + triggers ingestion background task
     │   │   ├── documents.py    # CRUD + chunk inspector
     │   │   ├── chat.py         # Full RAG pipeline + SSE streaming
     │   │   ├── retrieve.py     # POST /retrieve — retrieval only
     │   │   ├── auth.py         # Stub (Phase 8)
     │   │   └── dependencies.py
-    │   ├── core/               # Config, logging, security, middleware
-    │   ├── database/           # Models, session, base, migrations
+    │   ├── core/               # Config (pydantic-settings), logging, security headers, rate limiter
+    │   ├── database/           # SQLAlchemy models, async session, base, connection
     │   ├── ingestion/          # Full ingestion pipeline
     │   │   ├── parser.py       # PDF / DOCX / TXT / MD extraction
     │   │   ├── cleaner.py      # Text normalization
-    │   │   ├── chunker.py      # Recursive semantic chunking
-    │   │   ├── embeddings.py   # Singleton embedding service
-    │   │   ├── vector_store.py # pgvector persistence
+    │   │   ├── chunker.py      # Recursive character text splitting
+    │   │   ├── embeddings.py   # Singleton SentenceTransformer service
+    │   │   ├── vector_store.py # pgvector chunk persistence
     │   │   ├── metadata.py     # Document metadata extraction
-    │   │   └── pipeline.py     # Orchestrator
+    │   │   ├── supported_formats.py
+    │   │   └── pipeline.py     # Orchestrator (parse → clean → chunk → embed → store)
     │   ├── retrieval/          # Retrieval engine
     │   │   ├── retrieval_pipeline.py
     │   │   ├── vector_search.py
@@ -155,7 +170,8 @@ DocuQuery/
     │   │   ├── citations.py
     │   │   ├── scoring.py
     │   │   ├── filters.py
-    │   │   └── embedding_query.py
+    │   │   ├── embedding_query.py
+    │   │   └── exceptions.py
     │   ├── llm/                # LLM integration layer
     │   │   ├── providers/      # Groq, OpenAI, Anthropic, Gemini, Ollama
     │   │   ├── response_generator.py
@@ -164,9 +180,9 @@ DocuQuery/
     │   │   ├── models.py
     │   │   └── exceptions.py
     │   ├── schemas/            # Pydantic request/response models
-    │   └── services/           # Business logic
-    ├── migrations/             # Alembic migrations
-    ├── tests/                  # pytest test suite (68 tests)
+    │   └── services/           # Document service (save, list, delete, status update)
+    ├── migrations/             # Alembic migrations (initial schema + HNSW index)
+    ├── tests/                  # pytest test suite (71 tests)
     ├── Dockerfile
     ├── docker-compose.yml
     ├── railway.json
@@ -244,7 +260,7 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 ```env
 # App
 APP_NAME=DocuQuery
-APP_VERSION=0.5.0
+APP_VERSION=0.1.0
 DEBUG=false
 
 # CORS — comma-separated allowed origins
@@ -268,6 +284,11 @@ CHUNK_OVERLAP=120
 EMBEDDING_MODEL=BAAI/bge-base-en-v1.5
 EMBEDDING_BATCH_SIZE=32
 
+# Retrieval
+RETRIEVAL_TOP_K=5
+RETRIEVAL_SIMILARITY_THRESHOLD=0.30
+RETRIEVAL_MAX_CONTEXT_CHUNKS=10
+
 # LLM
 LLM_PROVIDER=groq
 LLM_MODEL=llama-3.3-70b-versatile
@@ -277,6 +298,7 @@ LLM_MAX_CONTEXT_TOKENS=3000
 LLM_STREAMING_ENABLED=true
 LLM_TIMEOUT=30.0
 LLM_API_KEY=<your-groq-api-key>
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
 ---
@@ -434,7 +456,7 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-Current test suite: **68 tests, 0 failures**
+Current test suite: **71 tests, 0 failures**
 
 Covers: text cleaner, document parser, chunker, metadata extraction, pipeline orchestration, retrieval scoring, citations, context builder, filters, LLM prompt construction, provider abstraction, response generator, streaming, failure paths.
 

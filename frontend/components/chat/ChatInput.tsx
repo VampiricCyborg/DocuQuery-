@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Send, Paperclip, Mic, MicOff, X, StopCircle } from "lucide-react"
 import { useChatStore } from "@/stores/chat.store"
 import { useFileStore } from "@/stores/file.store"
+import { chatService } from "@/services/mock"
 import { useVoice } from "@/hooks/useVoice"
 import { Button } from "@/components/ui/Button"
 import { Tooltip } from "@/components/ui/Tooltip"
@@ -15,7 +16,7 @@ export function ChatInput() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { sendMessage, isStreaming, activeId } = useChatStore()
+  const { sendMessage, isStreaming, activeId, addConversation } = useChatStore()
   const { addFile } = useFileStore()
 
   const { voiceState, start: startVoice, stop: stopVoice } = useVoice((transcript) => {
@@ -25,14 +26,20 @@ export function ChatInput() {
 
   const handleSubmit = useCallback(async () => {
     const content = text.trim()
-    if (!content || isStreaming || !activeId) return
+    if (!content || isStreaming) return
+
+    if (!activeId) {
+      const conv = await chatService.createConversation()
+      addConversation(conv)
+    }
+
     setText("")
     setPendingFiles([])
     // Upload pending files
     for (const f of pendingFiles) addFile(f)
     await sendMessage(content)
     textareaRef.current?.style.setProperty("height", "auto")
-  }, [text, isStreaming, activeId, pendingFiles, addFile, sendMessage])
+  }, [text, isStreaming, activeId, pendingFiles, addFile, addConversation, sendMessage])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -106,8 +113,7 @@ export function ChatInput() {
           value={text}
           onChange={handleTextChange}
           onKeyDown={handleKeyDown}
-          placeholder={activeId ? "Message DocuQuery… (Enter to send, Shift+Enter for newline)" : "Start a new chat first"}
-          disabled={!activeId}
+          placeholder="Message DocuQuery... (Enter to send, Shift+Enter for newline)"
           rows={1}
           className="flex-1 resize-none bg-transparent text-sm text-white placeholder:text-neutral-500 focus:outline-none disabled:opacity-40 py-1 max-h-[200px]"
         />
@@ -130,7 +136,7 @@ export function ChatInput() {
           <Button
             size="icon"
             className="h-8 w-8 shrink-0 mb-0.5"
-            disabled={!activeId || (!text.trim() && !isStreaming)}
+            disabled={!text.trim() && !isStreaming}
             onClick={handleSubmit}
           >
             {isStreaming
