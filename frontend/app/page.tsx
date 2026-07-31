@@ -1,13 +1,10 @@
 "use client"
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import {
   FileText, MessageSquare, BookOpen, Zap, ArrowRight,
   Upload, Search, Sparkles, ExternalLink, Shield, Check
 } from "lucide-react"
-import { useAuthStore } from "@/stores/auth.store"
 
 // ─── Hero Product Preview ─────────────────────────────────────────────────────
 
@@ -155,18 +152,6 @@ const WORKFLOW = [
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { isAuthenticated } = useAuthStore()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/dashboard")
-    }
-  }, [isAuthenticated, router])
-
-  // Don't flash landing while redirecting
-  if (isAuthenticated) return null
-
   return (
     <main className="min-h-screen bg-neutral-950 text-white overflow-x-hidden">
 

@@ -4,7 +4,19 @@
 
 > A production-grade, full-stack AI assistant platform for private document fleets — featuring real-time streaming, intelligent document ingestion, vector search, LLM-powered answers, and voice I/O.
 
-**Last Updated:** July 29, 2026
+**Last Updated:** July 31, 2026
+
+## Current Product Flow
+
+1. Open `/` to view the public landing page.
+2. Create an account through `/signup`, or use `/login` only for an existing account.
+3. After authentication, users enter the dashboard workspace.
+4. Choose an AI mode from **AI Agents** or the chat mode selector:
+   - **DocuQuery** — answers from uploaded documents only, with document citations.
+   - **LLM** — general AI conversation without document retrieval.
+   - **Hybrid** — combines uploaded documents, general LLM reasoning, and optional live web search.
+
+The frontend uses the existing dark, glassmorphism-inspired DocuQuery visual language with responsive dashboard, files, chat, agents, and settings views.
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)
@@ -97,6 +109,8 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | **Notifications** | [react-hot-toast](https://react-hot-toast.com/) |
 
 ### Backend
+
+The backend supports three mode-aware chat paths. Hybrid mode optionally calls Tavily's Search API for current web information and returns web sources alongside document citations.
 
 | Category | Technology |
 |---|---|
@@ -287,7 +301,14 @@ LLM_STREAMING_ENABLED=true
 LLM_TIMEOUT=30.0
 LLM_API_KEY=<your-groq-api-key>
 OLLAMA_BASE_URL=http://localhost:11434
+
+# Optional: live web search for Hybrid mode
+TAVILY_API_KEY=<your-tavily-api-key>
+TAVILY_MAX_RESULTS=5
+TAVILY_SEARCH_DEPTH=basic
 ```
+
+`TAVILY_API_KEY` belongs in `backend/.env`, never in the frontend environment. The backend sends the query to Tavily and passes the returned excerpts to the Hybrid LLM. If the key is empty or Tavily is unavailable, Hybrid falls back to document context plus general LLM reasoning.
 
 ---
 
@@ -306,6 +327,24 @@ OLLAMA_BASE_URL=http://localhost:11434
 | `GET` | `/auth/me` | Auth endpoint _(stub — wired in Phase 8)_ |
 
 Interactive docs available at `/docs` when `DEBUG=true`.
+
+### Chat modes
+
+Send a `mode` value with `POST /chat`:
+
+```json
+{
+  "message": "What are the latest developments in this topic?",
+  "conversation_id": null,
+  "mode": "hybrid"
+}
+```
+
+| Mode | Retrieval behavior | Sources shown |
+|---|---|---|
+| `docuquery` | Searches indexed uploaded documents only | Document, page, and chunk citations |
+| `llm` | Skips document retrieval | No document citations |
+| `hybrid` | Searches documents and, when configured, Tavily live web search | Document citations plus linked web sources |
 
 ---
 

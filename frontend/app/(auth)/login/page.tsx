@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/Button"
 import toast from "react-hot-toast"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("madhav@example.com")
-  const [password, setPassword] = useState("password")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const { login } = useAuthStore()
@@ -24,8 +24,8 @@ export default function LoginPage() {
       await login(email, password)
       toast.success("Welcome back!")
       router.push("/dashboard")
-    } catch {
-      toast.error("Invalid credentials")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to sign in")
     } finally {
       setLoading(false)
     }

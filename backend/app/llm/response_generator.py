@@ -37,7 +37,7 @@ def _truncate_context(context: str, max_tokens: int) -> str:
 
 
 def _build_citations(result: RetrievalResult) -> list[CitationRecord]:
-    return [
+    document_citations = [
         CitationRecord(
             document_id=c.document_id,
             filename=c.filename,
@@ -46,6 +46,19 @@ def _build_citations(result: RetrievalResult) -> list[CitationRecord]:
         )
         for c in result.chunks
     ]
+    web_citations = [
+        CitationRecord(
+            document_id=f"web:{source.url}",
+            filename=source.title,
+            page=0,
+            chunk_index=index,
+            source_type="web",
+            title=source.title,
+            url=source.url,
+        )
+        for index, source in enumerate(result.web_sources)
+    ]
+    return document_citations + web_citations
 
 
 def _build_request(
@@ -82,15 +95,15 @@ class ResponseGenerator:
     def __init__(self, provider: BaseLLMProvider) -> None:
         self._provider = provider
 
-    async def generate(self, message: str, retrieval_result: RetrievalResult) -> LLMResponse:
+    async def generate(self, message: str, retrieval_result: RetrievalResult, mode: str = "docuquery") -> LLMResponse:
         """Non-streaming path — returns a complete LLMResponse with citations attached."""
         settings = get_settings()
-        context, citations = self._prepare(retrieval_result, settings.llm_max_context_tokens)
+        context, citations = self._prepare(retrieval_result, settings.llm_max_context_tokens, allow_empty=mode in ("llm", "hybrid"))
 
         request = _build_request(
             message=message,
             context=context,
-            system_prompt=get_system_prompt(),
+            system_prompt=get_system_prompt(mode=mode),
             model=settings.llm_model,
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
@@ -107,16 +120,16 @@ class ResponseGenerator:
         return response
 
     async def stream(
-        self, message: str, retrieval_result: RetrievalResult
+        self, message: str, retrieval_result: RetrievalResult, mode: str = "docuquery"
     ) -> AsyncGenerator[str, None]:
         """Streaming path — yields SSE-framed tokens then a citations event."""
         settings = get_settings()
-        context, citations = self._prepare(retrieval_result, settings.llm_max_context_tokens)
+        context, citations = self._prepare(retrieval_result, settings.llm_max_context_tokens, allow_empty=mode in ("llm", "hybrid"))
 
         request = _build_request(
             message=message,
             context=context,
-            system_prompt=get_system_prompt(),
+            system_prompt=get_system_prompt(mode=mode),
             model=settings.llm_model,
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
@@ -136,11 +149,11 @@ class ResponseGenerator:
 
     @staticmethod
     def _prepare(
-        result: RetrievalResult, max_context_tokens: int
+        result: RetrievalResult, max_context_tokens: int, allow_empty: bool = False
     ) -> tuple[str, list[CitationRecord]]:
         # Guard first — before any work that depends on chunks being present
-        if not result.chunks:
+        if not result.chunks and not allow_empty:
             raise NoContextError("Retrieval returned no chunks — cannot generate answer.")
-        citations = _build_citations(result)
+        citations = [] if allow_empty else _build_citations(result)
         context = _truncate_context(result.context, max_context_tokens)
         return context, citations

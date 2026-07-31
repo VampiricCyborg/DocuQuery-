@@ -4,10 +4,25 @@ import { agentService } from "@/services/mock"
 import { AgentCard } from "@/components/agents/AgentCard"
 import { useUIStore } from "@/stores/ui.store"
 import { Skeleton } from "@/components/ui/Skeleton"
+import { useChatStore } from "@/stores/chat.store"
+import type { ChatMode } from "@/types"
 
 export default function AgentsPage() {
-  const { data: agents = [], isLoading } = useQuery({ queryKey: ["agents"], queryFn: agentService.getAgents })
+  const { data: sourceAgents = [], isLoading } = useQuery({ queryKey: ["agents"], queryFn: agentService.getAgents })
+  const agents = sourceAgents.slice(0, 3).map((agent, index) => ({
+    ...agent,
+    id: (["docuquery", "llm", "hybrid"] as const)[index],
+    name: (["DocuQuery", "LLM", "Hybrid"] as const)[index],
+    description: (["Ask questions grounded in your uploaded documents.", "General AI conversations and open-ended questions.", "Combine document context with AI reasoning."] as const)[index],
+  }))
   const { selectedAgent, setSelectedAgent } = useUIStore()
+  const setMode = useChatStore(s => s.setMode)
+
+  const chooseAgent = (agent: typeof agents[number]) => {
+    const selecting = selectedAgent?.id !== agent.id
+    setSelectedAgent(selecting ? agent : null)
+    if (selecting && ["docuquery", "llm", "hybrid"].includes(agent.id)) setMode(agent.id as ChatMode)
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
@@ -27,7 +42,7 @@ export default function AgentsPage() {
                 key={agent.id}
                 agent={agent}
                 selected={selectedAgent?.id === agent.id}
-                onClick={() => setSelectedAgent(selectedAgent?.id === agent.id ? null : agent)}
+                onClick={() => chooseAgent(agent)}
               />
             ))}
           </div>

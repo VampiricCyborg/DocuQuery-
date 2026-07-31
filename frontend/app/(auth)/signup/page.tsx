@@ -14,18 +14,18 @@ export default function SignupPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login } = useAuthStore()
+  const { signup } = useAuthStore()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
-      await login(email, password) // mock: signup = login
+      await signup(name, email, password)
       toast.success("Account created!")
-      router.push("/mode-select")
-    } catch {
-      toast.error("Something went wrong")
+      router.push("/dashboard")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to create account")
     } finally {
       setLoading(false)
     }

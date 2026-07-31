@@ -22,6 +22,9 @@ export interface CitationOut {
   filename: string
   page: number
   chunk_index: number
+  source_type?: "document" | "web"
+  title?: string
+  url?: string
 }
 
 export interface ChatResponseBody {
@@ -115,11 +118,12 @@ export const chatApi = {
   async *stream(
     message: string,
     conversationId?: string,
+    mode: "docuquery" | "llm" | "hybrid" = "docuquery",
   ): AsyncGenerator<{ type: "token"; data: string } | { type: "citations"; data: CitationOut[] } | { type: "error"; data: string }> {
     const res = await fetch(`${BASE_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, conversation_id: conversationId ?? null }),
+      body: JSON.stringify({ message, conversation_id: conversationId ?? null, mode }),
     })
 
     if (!res.ok || !res.body) {
@@ -179,10 +183,10 @@ export const chatApi = {
   },
 
   /** Non-streaming fallback. */
-  send: (message: string, conversationId?: string): Promise<ChatResponseBody> =>
+  send: (message: string, conversationId?: string, mode: "docuquery" | "llm" | "hybrid" = "docuquery"): Promise<ChatResponseBody> =>
     request("/chat", {
       method: "POST",
-      body: JSON.stringify({ message, conversation_id: conversationId ?? null }),
+      body: JSON.stringify({ message, conversation_id: conversationId ?? null, mode }),
     }),
 }
 

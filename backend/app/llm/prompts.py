@@ -34,8 +34,16 @@ PROMPT_VERSIONS: dict[str, str] = {
 DEFAULT_PROMPT_VERSION = "v1"
 
 
-def get_system_prompt(version: str = DEFAULT_PROMPT_VERSION) -> str:
+_LLM_PROMPT = """You are DocuQuery's general AI assistant. Answer the user's question clearly and helpfully using your broad knowledge. Be honest about uncertainty, reason step by step when useful, and do not invent sources or citations."""
+
+_HYBRID_PROMPT = """You are DocuQuery's hybrid assistant. Use the supplied document context as the primary source when it is relevant, then use your general knowledge to reason, explain, solve problems, and fill gaps. Clearly distinguish facts grounded in the documents from general reasoning. Do not invent document citations."""
+
+def get_system_prompt(version: str = DEFAULT_PROMPT_VERSION, mode: str = "docuquery") -> str:
     """Return the system prompt for the given version."""
     if version not in PROMPT_VERSIONS:
         raise ValueError(f"Unknown prompt version: {version!r}")
+    if mode == "llm":
+        return _LLM_PROMPT
+    if mode == "hybrid":
+        return _HYBRID_PROMPT
     return PROMPT_VERSIONS[version]

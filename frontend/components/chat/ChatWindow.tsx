@@ -12,22 +12,22 @@ import type { Conversation } from "@/types"
 
 const SUGGESTIONS_BY_MODE = {
   docuquery: [
-    "Summarize my uploaded documents",
-    "What are the key findings?",
-    "Compare documents A and B",
-    "List all action items mentioned",
+    "Ask a question about my uploaded documents",
+    "Summarize my assignment document",
+    "Compare the key points in my documents",
+    "List action items from the uploaded files",
   ],
   llm: [
-    "Explain how RAG works",
-    "Compare LangChain vs LlamaIndex",
-    "Write a Python script to chunk text",
-    "What is a vector embedding?",
+    "Explain a difficult concept to me",
+    "Help me write or improve something",
+    "Brainstorm ideas for my next project",
+    "Have a normal conversation with me",
   ],
   hybrid: [
-    "Summarize and add context",
-    "What does the document say + best practices?",
-    "Explain with background knowledge",
-    "Answer and suggest related resources",
+    "Answer the questions in my assignment",
+    "Explain my document with outside context",
+    "Summarize this and suggest next steps",
+    "Compare my documents with current best practices",
   ],
 }
 
@@ -106,6 +106,11 @@ function WelcomeScreen({ onSuggestion }: { onSuggestion: (t: string) => void }) 
             {meta.icon} {meta.label} Mode
           </h1>
           <p className="mt-1.5 text-sm text-neutral-500">{meta.description}</p>
+          <p className="mt-3 max-w-md text-xs leading-relaxed text-neutral-600">
+            {activeMode === "docuquery" && "Ask about files you have uploaded. Every answer is grounded in those documents."}
+            {activeMode === "llm" && "Ask anything and have a general AI conversation without document retrieval."}
+            {activeMode === "hybrid" && "Use your documents as context, then let AI reason through answers and next steps."}
+          </p>
         </div>
 
         {/* Suggestion chips */}

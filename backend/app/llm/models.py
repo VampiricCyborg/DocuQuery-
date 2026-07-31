@@ -22,6 +22,9 @@ class CitationRecord:
     filename: str
     page: int
     chunk_index: int
+    source_type: str = "document"
+    title: str | None = None
+    url: str | None = None
 
 
 @dataclass

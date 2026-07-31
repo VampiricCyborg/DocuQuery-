@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
+    # Live web search (used by Hybrid mode only)
+    tavily_api_key: str = ""
+    tavily_max_results: int = 5
+    tavily_search_depth: str = "basic"
+
     @property
     def allowed_origins_list(self) -> list[str]:
         raw = self.allowed_origins.strip()

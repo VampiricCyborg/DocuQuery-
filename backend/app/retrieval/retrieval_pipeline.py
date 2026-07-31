@@ -22,6 +22,7 @@ from app.retrieval.scoring import normalize_scores
 from app.retrieval.context_builder import build_context
 from app.retrieval.citations import Citation, extract_citations
 from app.retrieval.exceptions import NoResultsError
+from app.web_search import WebSearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class RetrievalResult:
     context: str
     citations: list[Citation]
     total_retrieved: int
+    web_sources: list[WebSearchResult] = field(default_factory=list)
 
 
 async def run_retrieval_pipeline(

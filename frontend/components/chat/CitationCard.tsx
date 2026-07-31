@@ -109,16 +109,13 @@ export function CitationList({ citations }: CitationListProps) {
   if (!citations || citations.length === 0) return null
 
   // Group by document_id, keeping the lowest page number and all chunk indices
-  const grouped = citations.reduce<Record<string, Citation & { chunks: number[] }>>(
+  const grouped = citations.reduce<Record<string, Citation & { chunks: number[]; pages: number[] }>>(
     (acc, c) => {
       if (!acc[c.document_id]) {
-        acc[c.document_id] = { ...c, chunks: [c.chunk_index] }
+        acc[c.document_id] = { ...c, chunks: [c.chunk_index], pages: [c.page] }
       } else {
         acc[c.document_id].chunks.push(c.chunk_index)
-        // Use the smallest page number as representative
-        if (c.page < acc[c.document_id].page) {
-          acc[c.document_id].page = c.page
-        }
+        acc[c.document_id].pages.push(c.page)
       }
       return acc
     },
@@ -147,13 +144,14 @@ function GroupedCitationCard({
   entry,
   index,
 }: {
-  entry: Citation & { chunks: number[] }
+  entry: Citation & { chunks: number[]; pages: number[] }
   index: number
 }) {
   const [open, setOpen] = useState(true)
   const router = useRouter()
 
   const uniqueChunks = [...new Set(entry.chunks)].sort((a, b) => a - b)
+  const uniquePages = [...new Set(entry.pages)].sort((a, b) => a - b)
 
   const handleViewInFiles = () => {
     router.push(`/files?highlight=${encodeURIComponent(entry.document_id)}`)
@@ -180,7 +178,7 @@ function GroupedCitationCard({
             {entry.filename}
           </p>
           <p className="text-[11px] text-neutral-500 mt-0.5">
-            Page {entry.page}
+            {entry.source_type === "web" ? "Live web source" : uniquePages.length === 1 ? `Page ${uniquePages[0]}` : `Pages ${uniquePages.join(" • ")}`}
           </p>
         </div>
         <div className="shrink-0 text-neutral-500">
@@ -204,21 +202,23 @@ function GroupedCitationCard({
             <div className="border-t border-neutral-700/50 px-3.5 py-2.5 flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap min-w-0">
                 <span className="text-[11px] text-neutral-500 font-medium shrink-0">
-                  Relevant chunks
+                  Chunks
                 </span>
                 <div className="flex flex-wrap gap-1">
-                  {uniqueChunks.map(chunk => (
+                  {entry.source_type === "web" ? (
+                    <span className="truncate text-[11px] text-neutral-500">Current information from the web</span>
+                  ) : uniqueChunks.map(chunk => (
                     <span
                       key={chunk}
                       className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500/20 px-1.5 text-[10px] font-semibold text-blue-300"
                     >
-                      {chunk}
+                      {chunk + 1}
                     </span>
                   ))}
                 </div>
               </div>
               <button
-                onClick={handleViewInFiles}
+                onClick={() => entry.source_type === "web" && entry.url ? window.open(entry.url, "_blank", "noopener,noreferrer") : handleViewInFiles()}
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5",
                   "text-[11px] font-medium text-neutral-300",
@@ -227,7 +227,7 @@ function GroupedCitationCard({
                 )}
               >
                 <ExternalLink className="h-3 w-3" />
-                View Document
+                {entry.source_type === "web" ? "Open Source" : "View Document"}
               </button>
             </div>
           </motion.div>

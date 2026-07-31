@@ -1,6 +1,4 @@
 "use client"
-import { useEffect } from "react"
-import { motion } from "framer-motion"
 import { ChevronDown, Zap } from "lucide-react"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { useUIStore } from "@/stores/ui.store"
@@ -8,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { agentService } from "@/services/mock"
 import { Badge } from "@/components/ui/Badge"
 import type { Agent } from "@/types"
+import { useChatStore } from "@/stores/chat.store"
 
 const statusVariant: Record<Agent["status"], "success" | "warning" | "error"> = {
   idle: "success", running: "warning", error: "error",
@@ -15,7 +14,14 @@ const statusVariant: Record<Agent["status"], "success" | "warning" | "error"> = 
 
 export function AgentSelector() {
   const { selectedAgent, setSelectedAgent } = useUIStore()
-  const { data: agents = [] } = useQuery({ queryKey: ["agents"], queryFn: agentService.getAgents })
+  const setMode = useChatStore(s => s.setMode)
+  const { data: sourceAgents = [] } = useQuery({ queryKey: ["agents"], queryFn: agentService.getAgents })
+  const agents = sourceAgents.slice(0, 3).map((agent, index) => ({
+    ...agent,
+    id: (["docuquery", "llm", "hybrid"] as const)[index],
+    name: (["DocuQuery", "LLM", "Hybrid"] as const)[index],
+    description: (["Ask questions grounded in your uploaded documents.", "General AI conversations and open-ended questions.", "Combine document context with AI reasoning."] as const)[index],
+  }))
 
   return (
     <DropdownMenu.Root>
@@ -41,7 +47,10 @@ export function AgentSelector() {
           {agents.map(agent => (
             <DropdownMenu.Item
               key={agent.id}
-              onSelect={() => setSelectedAgent(agent)}
+              onSelect={() => {
+                setSelectedAgent(agent)
+                if (["docuquery", "llm", "hybrid"].includes(agent.id)) setMode(agent.id as "docuquery" | "llm" | "hybrid")
+              }}
               className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer outline-none hover:bg-neutral-800 transition-colors"
             >
               <span className="text-lg">{agent.icon}</span>

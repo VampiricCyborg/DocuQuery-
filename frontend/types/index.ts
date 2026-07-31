@@ -38,6 +38,9 @@ export interface Citation {
   filename: string
   page: number
   chunk_index: number
+  source_type?: "document" | "web"
+  title?: string
+  url?: string
 }
 
 // ─── Chat ────────────────────────────────────────────────────────────────────

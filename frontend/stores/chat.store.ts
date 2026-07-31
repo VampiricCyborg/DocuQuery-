@@ -155,7 +155,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         set({ isStreaming: true })
 
         try {
-          for await (const event of chatApi.stream(content)) {
+          for await (const event of chatApi.stream(content, activeId, activeMode)) {
             if (event.type === "token") {
               appendToken(event.data)
             } else if (event.type === "citations") {
@@ -166,6 +166,9 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
                   filename: c.filename,
                   page: c.page,
                   chunk_index: c.chunk_index,
+                  source_type: c.source_type,
+                  title: c.title,
+                  url: c.url,
                 }))
               )
             }
