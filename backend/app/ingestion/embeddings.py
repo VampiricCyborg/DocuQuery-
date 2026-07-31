@@ -30,7 +30,28 @@ class EmbeddingService:
 
         settings = get_settings()
         logger.info("Loading embedding model: %s", settings.embedding_model)
+        
+        # Log memory usage before load (if psutil available)
+        try:
+            import psutil
+            import os
+            process = psutil.Process(os.getpid())
+            mem_before_mb = process.memory_info().rss / (1024 * 1024)
+            logger.info("[embeddings] Memory before model load: %.1f MB", mem_before_mb)
+        except ImportError:
+            mem_before_mb = None
+        
         self._model = SentenceTransformer(settings.embedding_model)
+        
+        # Log memory usage after load
+        if mem_before_mb is not None:
+            mem_after_mb = process.memory_info().rss / (1024 * 1024)
+            logger.info(
+                "[embeddings] Memory after model load: %.1f MB (delta: +%.1f MB)",
+                mem_after_mb,
+                mem_after_mb - mem_before_mb,
+            )
+        
         logger.info("Embedding model loaded.")
 
     def embed(self, texts: list[str]) -> list[list[float]]:

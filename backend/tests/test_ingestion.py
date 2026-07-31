@@ -166,8 +166,8 @@ async def test_pipeline_marks_failed_on_error():
         from app.ingestion.pipeline import run_ingestion_pipeline
         from app.database.models import ProcessingStatus
 
-        with pytest.raises(RuntimeError):
-            await run_ingestion_pipeline("d1", "/bad/path.pdf", "bad.pdf", mock_db)
+        # Pipeline must NOT re-raise — background tasks swallow errors cleanly
+        await run_ingestion_pipeline("d1", "/bad/path.pdf", "bad.pdf", mock_db)
 
         # Last status call must be FAILED
         last_call_status = mock_status.call_args_list[-1].args[1]

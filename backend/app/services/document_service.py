@@ -51,15 +51,23 @@ async def save_document(file: UploadFile, db: AsyncSession) -> Document:
 async def update_document_status(
     doc_id: str, status: ProcessingStatus, db: AsyncSession, total_chunks: int | None = None
 ) -> None:
-    """Update processing status (and optionally chunk count) for a document."""
+    """
+    Update processing status (and optionally chunk count) for a document.
+
+    Does NOT commit — the caller owns the transaction.  This makes the
+    function safe to call from background tasks (no FastAPI HTTPException)
+    and keeps all commits in one place (pipeline.py).
+    """
     result = await db.execute(select(Document).where(Document.id == doc_id))
     doc = result.scalar_one_or_none()
     if not doc:
-        raise HTTPException(status_code=404, detail="Document not found.")
+        # Raise a plain ValueError so background tasks don't get a FastAPI
+        # HTTPException, which is only meaningful inside a request context.
+        raise ValueError(f"Document {doc_id!r} not found — cannot update status.")
     doc.status = status
     if total_chunks is not None:
         doc.total_chunks = total_chunks
-    await db.commit()
+    # Intentionally no db.commit() here — caller is responsible for committing.
 
 
 async def list_documents(db: AsyncSession) -> list[Document]:

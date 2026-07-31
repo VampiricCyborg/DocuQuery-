@@ -8,17 +8,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Pin HuggingFace cache to /app/.cache so build-time and runtime use the same location
+ENV HF_HOME=/app/.cache/huggingface \
+    TRANSFORMERS_CACHE=/app/.cache/huggingface \
+    SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the embedding model into the image so startup is instant
+# Pre-download the embedding model into the image cache
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-base-en-v1.5')"
 
 COPY . .
 
-RUN mkdir -p uploads && useradd -m appuser && chown -R appuser /app
+# Create uploads dir and appuser, then transfer cache ownership so runtime can read it
+RUN mkdir -p uploads .cache && \
+    useradd -m appuser && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--timeout-keep-alive", "30"]
+# Single worker to avoid duplicating 438MB embedding model in RAM
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--timeout-keep-alive", "30"]

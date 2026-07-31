@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import Document, DocumentChunk
+from app.database.models import Document, DocumentChunk, ProcessingStatus
 from app.retrieval.exceptions import VectorSearchError
 
 if TYPE_CHECKING:
@@ -36,13 +36,23 @@ async def similarity_search(
     try:
         t0 = time.perf_counter()
 
+        logger.info(
+            "[vector_search] query_dim=%d  top_k=%d  extra_clauses=%d",
+            len(query_vector),
+            top_k,
+            len(where_clauses),
+        )
+
         # <=> is the pgvector cosine distance operator
         distance_expr = DocumentChunk.embedding.cosine_distance(query_vector)
 
+        # IMPORTANT: compare against the enum member, NOT a raw string.
+        # Using a raw string ("indexed") can silently return 0 rows with some
+        # SQLAlchemy / pgvector combinations even though the stored value matches.
         stmt = (
             select(DocumentChunk, distance_expr.label("distance"))
             .join(Document, DocumentChunk.document_id == Document.id)
-            .where(Document.status == "indexed")  # only search fully indexed docs
+            .where(Document.status == ProcessingStatus.indexed)  # ← enum member, not string
         )
 
         if where_clauses:
@@ -54,14 +64,25 @@ async def similarity_search(
         rows = result.all()
 
         latency_ms = (time.perf_counter() - t0) * 1000
-        logger.info(
-            "[retrieval] Vector search returned %d rows in %.1f ms (top_k=%d)",
-            len(rows), latency_ms, top_k,
-        )
+
+        if rows:
+            distances = [float(row.distance) for row in rows]
+            logger.info(
+                "[vector_search] returned %d rows in %.1f ms  "
+                "best_distance=%.4f  worst_distance=%.4f",
+                len(rows), latency_ms, distances[0], distances[-1],
+            )
+        else:
+            logger.warning(
+                "[vector_search] returned 0 rows in %.1f ms  top_k=%d  "
+                "— check that documents have status=INDEXED and embeddings exist",
+                latency_ms, top_k,
+            )
 
         return [(row.DocumentChunk, float(row.distance)) for row in rows]
 
     except VectorSearchError:
         raise
     except Exception as exc:
+        logger.error("[vector_search] query failed: %s", exc, exc_info=True)
         raise VectorSearchError(f"Vector search failed: {exc}") from exc

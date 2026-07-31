@@ -23,10 +23,23 @@ configure_logging(debug=settings.debug)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Eager-load the embedding model to avoid cold-load OOM on first /chat request
+    import logging
+    from app.ingestion.embeddings import get_embedding_service
+    logger = logging.getLogger(__name__)
+    logger.info("[startup] Eager-loading embedding model to avoid OOM on first request...")
+    service = get_embedding_service()
+    service._load_model()  # Load BAAI/bge-base-en-v1.5 (438MB) now, not on first /chat
+    logger.info("[startup] Embedding model loaded. Application ready.")
+    
     yield
+    
+    # Shutdown (nothing needed yet)
 
 
 def create_app() -> FastAPI:

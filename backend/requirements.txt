@@ -28,6 +28,7 @@ langchain-text-splitters==1.1.2
 
 # --- Embeddings ---
 sentence-transformers==5.4.1
+psutil==6.1.1
 
 # --- Rate limiting ---
 slowapi==0.1.9

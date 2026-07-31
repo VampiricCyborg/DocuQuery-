@@ -121,48 +121,37 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 
 ```
 DocuQuery/
-├── frontend/                   # Next.js 16.2 App Router
+├── frontend/                   # Next.js 15 App Router
 │   ├── app/
 │   │   ├── (auth)/             # login, signup, forgot-password
 │   │   └── (dashboard)/        # chat, dashboard, files, agents, settings
 │   ├── components/             # UI component library
-│   │   ├── chat/               # ChatInput, ChatWindow, MessageBubble, ToolCallDisplay
-│   │   ├── sidebar/            # Sidebar, NavLinks, UserMenu
-│   │   ├── layout/             # TopBar, Providers
-│   │   ├── dashboard/          # StatsGrid, ActivityFeed
-│   │   ├── agents/             # AgentCard, AgentSelector
-│   │   ├── file-upload/        # FileUploadZone (react-dropzone)
-│   │   ├── voice/              # VoiceWaveform
-│   │   └── ui/                 # Button, Input, Badge, Tooltip, Skeleton, Avatar
-│   ├── hooks/                  # useVoice, useAutoScroll, useCopy, useKeyboardShortcuts
-│   ├── stores/                 # Zustand stores (chat, file, auth, ui)
+│   ├── stores/                 # Zustand state stores
 │   ├── services/
-│   │   ├── api.ts              # Real backend API client (XHR upload + SSE streaming)
+│   │   ├── api.ts              # Real backend API client
 │   │   └── mock.ts             # Mock data for local dev without backend
-│   ├── lib/                    # Utility functions
 │   └── types/                  # Shared TypeScript types
 │
 └── backend/                    # FastAPI + Python 3.13
     ├── app/
     │   ├── api/                # Route handlers
     │   │   ├── health.py
-    │   │   ├── upload.py       # Upload + triggers ingestion background task
+    │   │   ├── upload.py       # Upload + triggers ingestion pipeline
     │   │   ├── documents.py    # CRUD + chunk inspector
     │   │   ├── chat.py         # Full RAG pipeline + SSE streaming
     │   │   ├── retrieve.py     # POST /retrieve — retrieval only
     │   │   ├── auth.py         # Stub (Phase 8)
     │   │   └── dependencies.py
-    │   ├── core/               # Config (pydantic-settings), logging, security headers, rate limiter
-    │   ├── database/           # SQLAlchemy models, async session, base, connection
+    │   ├── core/               # Config, logging, security, middleware
+    │   ├── database/           # Models, session, base, migrations
     │   ├── ingestion/          # Full ingestion pipeline
     │   │   ├── parser.py       # PDF / DOCX / TXT / MD extraction
     │   │   ├── cleaner.py      # Text normalization
-    │   │   ├── chunker.py      # Recursive character text splitting
-    │   │   ├── embeddings.py   # Singleton SentenceTransformer service
-    │   │   ├── vector_store.py # pgvector chunk persistence
+    │   │   ├── chunker.py      # Recursive semantic chunking
+    │   │   ├── embeddings.py   # Singleton embedding service
+    │   │   ├── vector_store.py # pgvector persistence
     │   │   ├── metadata.py     # Document metadata extraction
-    │   │   ├── supported_formats.py
-    │   │   └── pipeline.py     # Orchestrator (parse → clean → chunk → embed → store)
+    │   │   └── pipeline.py     # Orchestrator
     │   ├── retrieval/          # Retrieval engine
     │   │   ├── retrieval_pipeline.py
     │   │   ├── vector_search.py
@@ -170,8 +159,7 @@ DocuQuery/
     │   │   ├── citations.py
     │   │   ├── scoring.py
     │   │   ├── filters.py
-    │   │   ├── embedding_query.py
-    │   │   └── exceptions.py
+    │   │   └── embedding_query.py
     │   ├── llm/                # LLM integration layer
     │   │   ├── providers/      # Groq, OpenAI, Anthropic, Gemini, Ollama
     │   │   ├── response_generator.py
@@ -180,9 +168,9 @@ DocuQuery/
     │   │   ├── models.py
     │   │   └── exceptions.py
     │   ├── schemas/            # Pydantic request/response models
-    │   └── services/           # Document service (save, list, delete, status update)
-    ├── migrations/             # Alembic migrations (initial schema + HNSW index)
-    ├── tests/                  # pytest test suite (71 tests)
+    │   └── services/           # Business logic
+    ├── migrations/             # Alembic migrations
+    ├── tests/                  # pytest test suite (68 tests)
     ├── Dockerfile
     ├── docker-compose.yml
     ├── railway.json
