@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" rx="32" fill="#0A0A0A"/>
+  <circle cx="920" cy="80" r="330" fill="#2563EB" fill-opacity=".18"/>
+  <circle cx="1100" cy="560" r="280" fill="#7C3AED" fill-opacity=".16"/>
+  <rect x="650" y="105" width="400" height="390" rx="24" fill="#171717" stroke="#404040"/>
+  <rect x="685" y="165" width="230" height="48" rx="18" fill="#2563EB"/>
+  <rect x="685" y="235" width="310" height="96" rx="18" fill="#262626" stroke="#404040"/>
+  <rect x="685" y="365" width="300" height="52" rx="14" fill="#1D4ED8" fill-opacity=".25" stroke="#3B82F6" stroke-opacity=".4"/>
+  <text x="90" y="265" fill="#60A5FA" font-family="Arial, sans-serif" font-size="24" font-weight="700">DOCUQUERY</text>
+  <text x="90" y="340" fill="white" font-family="Arial, sans-serif" font-size="58" font-weight="700">Understand your</text>
+  <text x="90" y="410" fill="#A78BFA" font-family="Arial, sans-serif" font-size="58" font-weight="700">documents with AI.</text>
+  <text x="90" y="470" fill="#A3A3A3" font-family="Arial, sans-serif" font-size="23">Grounded answers. Clear citations. One calm workspace.</text>
+</svg>

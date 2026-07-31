@@ -29,11 +29,11 @@ export default function ForgotPasswordPage() {
         </div>
       ) : (
         <>
-          <p className="text-sm text-neutral-500 mb-4">Enter your email and we'll send a reset link.</p>
+          <p className="text-sm text-neutral-500 mb-4">Enter your email and we&apos;ll send a reset link.</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-neutral-400">Email</label>
-              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+              <label htmlFor="forgot-email" className="text-xs font-medium text-neutral-400">Email</label>
+              <Input id="forgot-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send reset link"}

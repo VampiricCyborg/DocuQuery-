@@ -60,10 +60,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const id = props.id ?? `settings-${label.toLowerCase().replace(/\s+/g, "-")}`
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-neutral-400">{label}</label>
-      <Input {...props} />
+      <label htmlFor={id} className="text-xs font-medium text-neutral-400">{label}</label>
+      <Input id={id} {...props} />
     </div>
   )
 }

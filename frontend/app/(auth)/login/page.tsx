@@ -23,7 +23,7 @@ export default function LoginPage() {
     try {
       await login(email, password)
       toast.success("Welcome back!")
-      router.push("/chat")
+      router.push("/dashboard")
     } catch {
       toast.error("Invalid credentials")
     } finally {
@@ -35,13 +35,14 @@ export default function LoginPage() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-400">Email</label>
-          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+          <label htmlFor="login-email" className="text-xs font-medium text-neutral-400">Email</label>
+          <Input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-neutral-400">Password</label>
+          <label htmlFor="login-password" className="text-xs font-medium text-neutral-400">Password</label>
           <div className="relative">
             <Input
+              id="login-password"
               type={showPw ? "text" : "password"}
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -49,7 +50,7 @@ export default function LoginPage() {
               required
               className="pr-10"
             />
-            <button type="button" onClick={() => setShowPw(v => !v)}
+            <button type="button" aria-label={showPw ? "Hide password" : "Show password"} onClick={() => setShowPw(v => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors">
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

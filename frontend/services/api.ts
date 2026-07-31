@@ -13,9 +13,8 @@ export interface DocumentOut {
   file_type: string
   file_size: number
   status: "uploaded" | "processing" | "indexed" | "failed"
-  created_at: string
-  updated_at: string
-  chunk_count: number
+  total_chunks: number
+  upload_time: string
 }
 
 export interface CitationOut {
@@ -30,6 +29,16 @@ export interface ChatResponseBody {
   citations: CitationOut[]
   model: string
   conversation_id?: string
+}
+
+/**
+ * Structured result of parsing a single SSE stream.
+ * `tokens` is the full assembled text; `citations` are the structured citations
+ * extracted from the `event: citations` frame.
+ */
+export interface StreamResult {
+  tokens: string
+  citations: CitationOut[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,7 +71,6 @@ export const documentApi = {
     const form = new FormData()
     form.append("file", file)
 
-    // Use XMLHttpRequest for progress tracking
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open("POST", `${BASE_URL}/upload`)
@@ -91,14 +99,27 @@ export const documentApi = {
 
 export const chatApi = {
   /**
-   * Streaming chat — yields raw SSE lines.
-   * Caller is responsible for parsing token / citations / done / error events.
+   * Streaming chat.
+   *
+   * Yields `{ type: "token", data: string }` for each token and
+   * `{ type: "citations", data: CitationOut[] }` once at the end.
+   *
+   * SSE protocol from backend:
+   *   data: <token>               — token event (default event type)
+   *   event: citations            — citation event
+   *   data: <json array>
+   *   data: [DONE]                — sentinel
+   *   event: error                — error event
+   *   data: <message>
    */
-  async *stream(message: string): AsyncGenerator<string> {
+  async *stream(
+    message: string,
+    conversationId?: string,
+  ): AsyncGenerator<{ type: "token"; data: string } | { type: "citations"; data: CitationOut[] } | { type: "error"; data: string }> {
     const res = await fetch(`${BASE_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, conversation_id: conversationId ?? null }),
     })
 
     if (!res.ok || !res.body) {
@@ -108,28 +129,60 @@ export const chatApi = {
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ""
+    let currentEventType = "message" // default SSE event type
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
 
+      // SSE is newline-delimited; split on double-newline (event boundary)
+      // but process line by line to track event type
       const lines = buffer.split("\n")
       buffer = lines.pop() ?? ""
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          yield line.slice(6) // strip "data: " prefix
+        const trimmed = line.trim()
+
+        if (trimmed === "") {
+          // End of an SSE event block — reset event type
+          currentEventType = "message"
+          continue
+        }
+
+        if (trimmed.startsWith("event:")) {
+          currentEventType = trimmed.slice(6).trim()
+          continue
+        }
+
+        if (trimmed.startsWith("data:")) {
+          const payload = trimmed.slice(5).trim()
+
+          if (payload === "[DONE]") return
+
+          if (currentEventType === "citations") {
+            try {
+              const citations = JSON.parse(payload) as CitationOut[]
+              yield { type: "citations", data: citations }
+            } catch {
+              // malformed citation JSON — skip
+            }
+          } else if (currentEventType === "error") {
+            yield { type: "error", data: payload }
+          } else {
+            // Regular token
+            yield { type: "token", data: payload }
+          }
         }
       }
     }
   },
 
-  /** Non-streaming fallback (used when LLM_STREAMING_ENABLED=false). */
-  send: (message: string): Promise<ChatResponseBody> =>
+  /** Non-streaming fallback. */
+  send: (message: string, conversationId?: string): Promise<ChatResponseBody> =>
     request("/chat", {
       method: "POST",
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, conversation_id: conversationId ?? null }),
     }),
 }
 

@@ -20,6 +20,7 @@ export const MOCK_AGENTS: Agent[] = [
 export const MOCK_CONVERSATIONS: Conversation[] = [
   {
     id: "c1", title: "RAG pipeline setup", pinned: true,
+    mode: "docuquery",
     agentId: "a1",
     messages: [
       { id: "m1", role: "user", content: "How do I set up a RAG pipeline?", status: "done", timestamp: new Date(Date.now() - 3600000).toISOString() },
@@ -30,6 +31,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
   },
   {
     id: "c2", title: "Vector database comparison", pinned: false,
+    mode: "llm",
     messages: [
       { id: "m3", role: "user", content: "Compare Pinecone vs Weaviate vs Chroma", status: "done", timestamp: new Date(Date.now() - 86400000).toISOString() },
     ],
@@ -38,6 +40,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
   },
   {
     id: "c3", title: "LangChain vs LlamaIndex", pinned: false,
+    mode: "hybrid",
     messages: [],
     createdAt: new Date(Date.now() - 172800000).toISOString(),
     updatedAt: new Date(Date.now() - 172800000).toISOString(),
@@ -71,7 +74,7 @@ export const chatService = {
   },
   async createConversation(): Promise<Conversation> {
     await delay(200)
-    return { id: generateId(), title: "New Chat", messages: [], pinned: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    return { id: generateId(), title: "New Chat", messages: [], mode: "docuquery", pinned: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
   },
   async deleteConversation(id: string): Promise<void> {
     await delay(200)

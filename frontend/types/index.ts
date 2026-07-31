@@ -8,6 +8,38 @@ export interface User {
   createdAt: string
 }
 
+// ─── Chat Mode ───────────────────────────────────────────────────────────────
+export type ChatMode = "docuquery" | "llm" | "hybrid"
+
+export const CHAT_MODE_META: Record<ChatMode, { label: string; icon: string; color: string; description: string }> = {
+  docuquery: {
+    label: "DocuQuery",
+    icon: "⚡",
+    color: "text-emerald-400",
+    description: "Answers grounded in your uploaded documents only",
+  },
+  llm: {
+    label: "LLM",
+    icon: "🤖",
+    color: "text-blue-400",
+    description: "General AI conversation — no document retrieval",
+  },
+  hybrid: {
+    label: "Hybrid",
+    icon: "🧠",
+    color: "text-purple-400",
+    description: "Documents first, then LLM knowledge to fill gaps",
+  },
+}
+
+// ─── Citations ────────────────────────────────────────────────────────────────
+export interface Citation {
+  document_id: string
+  filename: string
+  page: number
+  chunk_index: number
+}
+
 // ─── Chat ────────────────────────────────────────────────────────────────────
 export type MessageRole = "user" | "assistant" | "system"
 export type MessageStatus = "sending" | "streaming" | "done" | "error"
@@ -18,14 +50,17 @@ export interface Message {
   content: string
   status: MessageStatus
   timestamp: string
+  citations?: Citation[]
   attachments?: FileAttachment[]
   toolCalls?: ToolCall[]
+  feedback?: "up" | "down" | null
 }
 
 export interface Conversation {
   id: string
   title: string
   messages: Message[]
+  mode: ChatMode
   agentId?: string
   pinned: boolean
   createdAt: string
@@ -44,6 +79,7 @@ export interface FileAttachment {
   url?: string
   status: FileStatus
   progress?: number
+  uploadedAt?: string
 }
 
 // ─── Agents ──────────────────────────────────────────────────────────────────

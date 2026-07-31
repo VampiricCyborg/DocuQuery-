@@ -23,7 +23,7 @@ export default function SignupPage() {
     try {
       await login(email, password) // mock: signup = login
       toast.success("Account created!")
-      router.push("/chat")
+      router.push("/mode-select")
     } catch {
       toast.error("Something went wrong")
     } finally {
@@ -40,8 +40,8 @@ export default function SignupPage() {
           { label: "Password", value: password, set: setPassword, type: "password", placeholder: "Min 8 characters" },
         ].map(({ label, value, set, type, placeholder }) => (
           <div key={label} className="space-y-1.5">
-            <label className="text-xs font-medium text-neutral-400">{label}</label>
-            <Input type={type} value={value} onChange={e => set(e.target.value)} placeholder={placeholder} required />
+            <label htmlFor={`signup-${label.toLowerCase()}`} className="text-xs font-medium text-neutral-400">{label}</label>
+            <Input id={`signup-${label.toLowerCase()}`} type={type} value={value} onChange={e => set(e.target.value)} placeholder={placeholder} required />
           </div>
         ))}
         <Button type="submit" className="w-full" disabled={loading}>

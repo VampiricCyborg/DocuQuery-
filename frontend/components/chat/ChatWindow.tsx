@@ -1,48 +1,64 @@
 "use client"
-import { useEffect } from "react"
+import { useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Sparkles } from "lucide-react"
 import { useChatStore } from "@/stores/chat.store"
-import { chatService } from "@/services/mock"
 import { MessageBubble } from "./MessageBubble"
 import { ChatInput } from "./ChatInput"
-import { MessageSkeleton } from "@/components/ui/Skeleton"
 import { useAutoScroll } from "@/hooks/useAutoScroll"
+import { CHAT_MODE_META } from "@/types"
+import { generateId } from "@/lib/utils"
+import type { Conversation } from "@/types"
 
-const SUGGESTIONS = [
-  "Summarize my uploaded documents",
-  "What is RAG and how does it work?",
-  "Compare different vector databases",
-  "Help me set up a document pipeline",
-]
+const SUGGESTIONS_BY_MODE = {
+  docuquery: [
+    "Summarize my uploaded documents",
+    "What are the key findings?",
+    "Compare documents A and B",
+    "List all action items mentioned",
+  ],
+  llm: [
+    "Explain how RAG works",
+    "Compare LangChain vs LlamaIndex",
+    "Write a Python script to chunk text",
+    "What is a vector embedding?",
+  ],
+  hybrid: [
+    "Summarize and add context",
+    "What does the document say + best practices?",
+    "Explain with background knowledge",
+    "Answer and suggest related resources",
+  ],
+}
 
 export function ChatWindow() {
-  const { conversations, activeId, setConversations, addConversation, sendMessage } = useChatStore()
+  const { conversations, activeId, addConversation, sendMessage, activeMode } = useChatStore()
   const bottomRef = useAutoScroll()
   const active = conversations.find(c => c.id === activeId)
 
-  useEffect(() => {
-    chatService.getConversations().then(setConversations)
-  }, [setConversations])
-
   const handleSuggestion = async (text: string) => {
-    if (activeId) {
-      await sendMessage(text)
-    } else {
-      const conv = await chatService.createConversation()
+    if (!activeId) {
+      const conv: Conversation = {
+        id: generateId(),
+        title: text.slice(0, 52).trim(),
+        messages: [],
+        mode: activeMode,
+        pinned: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
       addConversation(conv)
-      // sendMessage will be called after activeId is set via store
-      setTimeout(() => sendMessage(text), 50)
+      // Let the store flush before sending
+      await new Promise(r => setTimeout(r, 0))
     }
+    await sendMessage(text)
   }
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Messages area */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto">
-        {!active ? (
-          <WelcomeScreen onSuggestion={handleSuggestion} />
-        ) : active.messages.length === 0 ? (
+        {!active || active.messages.length === 0 ? (
           <WelcomeScreen onSuggestion={handleSuggestion} />
         ) : (
           <div className="mx-auto max-w-3xl py-4">
@@ -67,29 +83,40 @@ export function ChatWindow() {
 }
 
 function WelcomeScreen({ onSuggestion }: { onSuggestion: (t: string) => void }) {
+  const { activeMode } = useChatStore()
+  const meta = CHAT_MODE_META[activeMode]
+  const suggestions = SUGGESTIONS_BY_MODE[activeMode]
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center h-full px-4 py-16">
+    <div className="flex h-full flex-col items-center justify-center px-4 py-16">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.35 }}
         className="flex flex-col items-center gap-6 max-w-lg w-full"
       >
+        {/* Icon */}
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-500/20">
           <Sparkles className="h-7 w-7 text-white" />
         </div>
+
+        {/* Heading */}
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-white">How can I help you?</h1>
-          <p className="mt-1.5 text-sm text-neutral-500">Ask anything, upload documents, or pick an agent below.</p>
+          <h1 className="text-2xl font-semibold text-white">
+            {meta.icon} {meta.label} Mode
+          </h1>
+          <p className="mt-1.5 text-sm text-neutral-500">{meta.description}</p>
         </div>
+
+        {/* Suggestion chips */}
         <div className="grid grid-cols-2 gap-2 w-full">
-          {SUGGESTIONS.map(s => (
+          {suggestions.map(s => (
             <motion.button
               key={s}
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onSuggestion(s)}
-              className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-left text-sm text-neutral-300 hover:border-neutral-600 hover:text-white transition-all"
+              className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-left text-xs text-neutral-300 hover:border-neutral-600 hover:text-white transition-all"
             >
               {s}
             </motion.button>

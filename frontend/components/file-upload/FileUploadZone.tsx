@@ -2,7 +2,7 @@
 import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 import { motion, AnimatePresence } from "framer-motion"
-import { Upload, FileText, Image, File, X, CheckCircle, AlertCircle } from "lucide-react"
+import { Upload, FileText, Image, File, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { useFileStore } from "@/stores/file.store"
 import { cn, formatBytes } from "@/lib/utils"
 import type { FileAttachment } from "@/types"
@@ -47,7 +47,7 @@ export function FileUploadZone() {
   )
 }
 
-export function FileList() {
+export function FileList({ highlightId }: { highlightId?: string | null } = {}) {
   const { files, removeFile } = useFileStore()
 
   if (files.length === 0) return null
@@ -55,13 +55,13 @@ export function FileList() {
   return (
     <div className="mt-4 space-y-2">
       <AnimatePresence>
-        {files.map(f => <FileCard key={f.id} file={f} onRemove={() => removeFile(f.id)} />)}
+        {files.map(f => <FileCard key={f.id} file={f} highlighted={f.id === highlightId} onRemove={() => removeFile(f.id)} />)}
       </AnimatePresence>
     </div>
   )
 }
 
-function FileCard({ file, onRemove }: { file: FileAttachment; onRemove: () => void }) {
+function FileCard({ file, highlighted, onRemove }: { file: FileAttachment; highlighted?: boolean; onRemove: () => void }) {
   const Icon = file.type === "pdf" ? FileText : file.type === "image" ? Image : File
 
   return (
@@ -69,20 +69,21 @@ function FileCard({ file, onRemove }: { file: FileAttachment; onRemove: () => vo
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="flex items-center gap-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3"
+      id={`document-${file.id}`}
+      className={cn("flex items-center gap-3 rounded-xl border bg-neutral-900 p-3 transition-colors", highlighted ? "border-blue-500/70 ring-2 ring-blue-500/20" : "border-neutral-800")}
     >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-800">
         <Icon className="h-4 w-4 text-neutral-400" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="truncate text-sm font-medium text-white">{file.name}</p>
-        <p className="text-xs text-neutral-500">{formatBytes(file.size)}</p>
-        {file.status === "uploading" && (
+        <p className="text-xs text-neutral-500">{formatBytes(file.size)}{file.uploadedAt ? ` · ${new Date(file.uploadedAt).toLocaleString()}` : ""}</p>
+        {(file.status === "uploading" || file.status === "processing") && (
           <div className="mt-1.5 h-1 w-full rounded-full bg-neutral-800 overflow-hidden">
             <motion.div
               className="h-full rounded-full bg-blue-500"
               initial={{ width: 0 }}
-              animate={{ width: `${file.progress ?? 0}%` }}
+              animate={{ width: `${file.progress ?? 65}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
@@ -91,11 +92,12 @@ function FileCard({ file, onRemove }: { file: FileAttachment; onRemove: () => vo
       <div className="shrink-0">
         {file.status === "ready" && <CheckCircle className="h-4 w-4 text-green-400" />}
         {file.status === "error" && <AlertCircle className="h-4 w-4 text-red-400" />}
-        {file.status === "uploading" && (
+        {file.status === "processing" && <Loader2 className="h-4 w-4 animate-spin text-blue-400" />}
+        {(file.status === "uploading" || file.status === "processing") && (
           <span className="text-xs text-neutral-500">{file.progress}%</span>
         )}
       </div>
-      <button onClick={onRemove} className="shrink-0 rounded-md p-1 text-neutral-600 hover:bg-neutral-800 hover:text-white transition-colors">
+      <button aria-label={`Delete ${file.name}`} onClick={onRemove} className="shrink-0 rounded-md p-1 text-neutral-600 hover:bg-neutral-800 hover:text-white transition-colors">
         <X className="h-3.5 w-3.5" />
       </button>
     </motion.div>
