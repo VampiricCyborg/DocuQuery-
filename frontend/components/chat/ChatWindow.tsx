@@ -1,5 +1,4 @@
 "use client"
-import { useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Sparkles } from "lucide-react"
 import { useChatStore } from "@/stores/chat.store"
@@ -9,6 +8,7 @@ import { useAutoScroll } from "@/hooks/useAutoScroll"
 import { CHAT_MODE_META } from "@/types"
 import { generateId } from "@/lib/utils"
 import type { Conversation } from "@/types"
+import { getDefaultChatMode } from "@/stores/settings.store"
 
 const SUGGESTIONS_BY_MODE = {
   docuquery: [
@@ -32,7 +32,7 @@ const SUGGESTIONS_BY_MODE = {
 }
 
 export function ChatWindow() {
-  const { conversations, activeId, addConversation, sendMessage, activeMode } = useChatStore()
+  const { conversations, activeId, addConversation, sendMessage } = useChatStore()
   const bottomRef = useAutoScroll()
   const active = conversations.find(c => c.id === activeId)
 
@@ -42,7 +42,7 @@ export function ChatWindow() {
         id: generateId(),
         title: text.slice(0, 52).trim(),
         messages: [],
-        mode: activeMode,
+        mode: getDefaultChatMode(),
         pinned: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

@@ -5,6 +5,7 @@ import {
   FileText, MessageSquare, BookOpen, Zap, ArrowRight,
   Upload, Search, Sparkles, ExternalLink, Shield, Check
 } from "lucide-react"
+import { useAuthStore } from "@/stores/auth.store"
 
 // ─── Hero Product Preview ─────────────────────────────────────────────────────
 
@@ -152,30 +153,27 @@ const WORKFLOW = [
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const { user, isHydrated } = useAuthStore()
+  const authenticated = isHydrated && !!user
   return (
     <main className="min-h-screen bg-neutral-950 text-white overflow-x-hidden">
 
       {/* ── Nav ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-neutral-800/50 bg-neutral-950/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" aria-label="DocuQuery home" className="flex items-center gap-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-900/30">
               <span className="text-sm font-bold">✦</span>
             </div>
             <span className="text-sm font-bold tracking-tight">DocuQuery</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
+            {!authenticated && <Link href="/login" className="rounded-lg px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Login</Link>}
             <Link
-              href="/login"
-              className="rounded-lg px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              href="/signup"
+              href={authenticated ? "/chat" : "/signup"}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/30"
             >
-              Get Started
+              {authenticated ? "Continue Chat" : "Get Started"}
             </Link>
           </div>
         </div>
@@ -221,18 +219,18 @@ export default function LandingPage() {
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <Link
-                  href="/signup"
+                  href={authenticated ? "/chat" : "/signup"}
                   className="group inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 hover:bg-blue-500 transition-all hover:shadow-blue-800/40 hover:shadow-xl"
                 >
-                  Get Started Free
+                  {authenticated ? "Open DocuQuery" : "Get Started Free"}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
-                <Link
+                {!authenticated && <Link
                   href="/login"
                   className="inline-flex items-center gap-2 rounded-xl border border-neutral-700 px-6 py-3 text-sm font-medium text-neutral-300 hover:border-neutral-500 hover:text-white transition-all"
                 >
                   Sign In
-                </Link>
+                </Link>}
               </div>
 
               {/* Trust signals */}
@@ -364,10 +362,10 @@ export default function LandingPage() {
                 Upload your first document and get grounded, cited answers in seconds.
               </p>
               <Link
-                href="/signup"
+                  href={authenticated ? "/chat" : "/signup"}
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 hover:bg-blue-500 transition-all"
               >
-                Get Started Free
+                {authenticated ? "Open DocuQuery" : "Get Started Free"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

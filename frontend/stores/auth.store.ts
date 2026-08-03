@@ -1,52 +1,64 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
 import type { User } from "@/types"
 
-interface StoredAccount {
-  user: User
-  password: string
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 
 interface AuthStore {
   user: User | null
   isAuthenticated: boolean
-  accounts: StoredAccount[]
+  isHydrated: boolean
+  hydrate: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      isAuthenticated: false,
-      accounts: [],
-      login: async (email, password) => {
-        await new Promise(r => setTimeout(r, 500))
-        const account = get().accounts.find(item => item.user.email.toLowerCase() === email.trim().toLowerCase())
-        if (!account) throw new Error("No account found. Please sign up first.")
-        if (account.password !== password) throw new Error("Incorrect password.")
-        set({ user: account.user, isAuthenticated: true })
-      },
-      signup: async (name, email, password) => {
-        await new Promise(r => setTimeout(r, 500))
-        const normalizedEmail = email.trim().toLowerCase()
-        if (get().accounts.some(item => item.user.email.toLowerCase() === normalizedEmail)) {
-          throw new Error("An account already exists. Please sign in instead.")
-        }
-        if (password.length < 8) throw new Error("Password must be at least 8 characters.")
-        const user: User = {
-          id: crypto.randomUUID(),
-          name: name.trim(),
-          email: normalizedEmail,
-          plan: "free",
-          createdAt: new Date().toISOString(),
-        }
-        set(state => ({ accounts: [...state.accounts, { user, password }], user, isAuthenticated: true }))
-      },
-      logout: () => set({ user: null, isAuthenticated: false }),
-    }),
-    { name: "auth-store-v2" }
-  )
-)
+async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...init?.headers },
+  })
+  if (!response.ok) {
+    let detail = "Authentication request failed"
+    try {
+      const body = await response.json() as { detail?: string }
+      detail = body.detail ?? detail
+    } catch { /* preserve generic error */ }
+    throw new Error(detail)
+  }
+  return response.status === 204 ? (undefined as T) : response.json() as Promise<T>
+}
+
+export const useAuthStore = create<AuthStore>((set) => ({
+  user: null,
+  isAuthenticated: false,
+  isHydrated: false,
+  hydrate: async () => {
+    try {
+      const user = await authRequest<User>("/auth/me")
+      set({ user, isAuthenticated: true, isHydrated: true })
+    } catch {
+      set({ user: null, isAuthenticated: false, isHydrated: true })
+    }
+  },
+  login: async (email, password) => {
+    const user = await authRequest<User>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    })
+    set({ user, isAuthenticated: true, isHydrated: true })
+  },
+  signup: async (name, email, password) => {
+    const user = await authRequest<User>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ name, email, password }),
+    })
+    set({ user, isAuthenticated: true, isHydrated: true })
+  },
+  logout: async () => {
+    try { await authRequest<void>("/auth/logout", { method: "POST" }) } finally {
+      set({ user: null, isAuthenticated: false, isHydrated: true })
+    }
+  },
+}))

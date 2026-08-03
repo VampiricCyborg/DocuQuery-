@@ -11,6 +11,7 @@ import { ModeIndicator } from "./ModeIndicator"
 import { cn, formatBytes, generateId } from "@/lib/utils"
 import { CHAT_MODE_META } from "@/types"
 import type { Conversation } from "@/types"
+import { getDefaultChatMode } from "@/stores/settings.store"
 
 const MODE_PLACEHOLDERS = {
   docuquery: "Ask about your uploaded documents…",
@@ -41,7 +42,7 @@ export function ChatInput() {
         id: generateId(),
         title: "New Chat",
         messages: [],
-        mode: activeMode,
+        mode: getDefaultChatMode(),
         pinned: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -57,7 +58,7 @@ export function ChatInput() {
     await new Promise(r => setTimeout(r, 0))
     await sendMessage(content)
     textareaRef.current?.style.setProperty("height", "auto")
-  }, [text, isStreaming, activeId, pendingFiles, activeMode, addFile, addConversation, sendMessage])
+  }, [text, isStreaming, activeId, pendingFiles, addFile, addConversation, sendMessage])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

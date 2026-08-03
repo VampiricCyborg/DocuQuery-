@@ -8,16 +8,17 @@ import { useChatStore } from "@/stores/chat.store"
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts"
 import { generateId } from "@/lib/utils"
 import type { Conversation } from "@/types"
+import { getDefaultChatMode } from "@/stores/settings.store"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isHydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isAuthenticated) router.replace("/")
-  }, [isAuthenticated, router])
+    if (isHydrated && !isAuthenticated) router.replace("/login")
+  }, [isAuthenticated, isHydrated, router])
 
-  const { addConversation, activeMode } = useChatStore()
+  const { addConversation } = useChatStore()
 
   useKeyboardShortcuts([
     {
@@ -28,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           id: generateId(),
           title: "New Chat",
           messages: [],
-          mode: activeMode,
+          mode: getDefaultChatMode(),
           pinned: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -39,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     },
   ])
 
-  if (!isAuthenticated) return null
+  if (!isHydrated || !isAuthenticated) return null
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-950 text-white">

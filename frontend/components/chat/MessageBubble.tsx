@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/auth.store"
 import { formatTime, cn } from "@/lib/utils"
 import { ToolCallDisplay } from "./ToolCallDisplay"
 import { CitationList } from "./CitationCard"
+import { useSettingsStore } from "@/stores/settings.store"
 
 export function MessageBubble({ message, isLast }: { message: Message; isLast: boolean }) {
   const { copy, copied } = useCopy()
@@ -22,6 +23,7 @@ export function MessageBubble({ message, isLast }: { message: Message; isLast: b
   const user = useAuthStore(s => s.user)
   const isUser = message.role === "user"
   const hasCitations = !isUser && (message.citations?.length ?? 0) > 0
+  const showCitations = useSettingsStore(s => s.showCitations)
 
   const handleFeedback = (fb: "up" | "down") => {
     if (!activeId) return
@@ -63,7 +65,7 @@ export function MessageBubble({ message, isLast }: { message: Message; isLast: b
           {message.status === "streaming" && !message.content ? (
             <TypingIndicator />
           ) : (
-            <div className={cn("prose prose-sm max-w-none", isUser ? "prose-invert" : "prose-invert")}>
+            <div className={cn("prose prose-sm max-w-none whitespace-pre-wrap", isUser ? "prose-invert" : "prose-invert")}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {message.content}
               </ReactMarkdown>
@@ -76,7 +78,7 @@ export function MessageBubble({ message, isLast }: { message: Message; isLast: b
         </div>
 
         {/* Citations — rendered outside the bubble */}
-        {hasCitations && message.status === "done" && (
+        {showCitations && hasCitations && message.status === "done" && (
           <div className="w-full">
             <CitationList citations={message.citations!} />
           </div>

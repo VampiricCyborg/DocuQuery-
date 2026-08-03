@@ -98,7 +98,7 @@ class TestPrompts:
 
 class TestStreamUtils:
     def test_token_event_format(self):
-        assert token_event("hello") == "data: hello\n\n"
+        assert token_event("hello") == 'event: token\ndata: "hello"\n\n'
 
     def test_done_event_format(self):
         assert done_event() == "data: [DONE]\n\n"
@@ -123,8 +123,8 @@ class TestStreamUtils:
         async for event in stream_with_citations(_tokens(), []):
             events.append(event)
 
-        assert events[0] == "data: Hello \n\n"
-        assert events[1] == "data: world\n\n"
+        assert events[0] == 'event: token\ndata: "Hello "\n\n'
+        assert events[1] == 'event: token\ndata: "world"\n\n'
         assert "event: citations" in events[2]
         assert events[3] == "data: [DONE]\n\n"
 

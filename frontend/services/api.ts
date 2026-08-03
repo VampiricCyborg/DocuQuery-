@@ -49,6 +49,7 @@ export interface StreamResult {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
+    credentials: "include",
     headers: { "Content-Type": "application/json", ...init?.headers },
   })
   if (!res.ok) {
@@ -77,6 +78,7 @@ export const documentApi = {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open("POST", `${BASE_URL}/upload`)
+      xhr.withCredentials = true
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && onProgress) {
@@ -122,6 +124,7 @@ export const chatApi = {
   ): AsyncGenerator<{ type: "token"; data: string } | { type: "citations"; data: CitationOut[] } | { type: "error"; data: string }> {
     const res = await fetch(`${BASE_URL}/chat`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, conversation_id: conversationId ?? null, mode }),
     })
@@ -146,21 +149,26 @@ export const chatApi = {
       buffer = lines.pop() ?? ""
 
       for (const line of lines) {
-        const trimmed = line.trim()
+        // Only remove the transport CR. Trimming the complete line corrupts
+        // streamed tokens whose first character is meaningful whitespace.
+        const normalizedLine = line.endsWith("\r") ? line.slice(0, -1) : line
 
-        if (trimmed === "") {
+        if (normalizedLine === "") {
           // End of an SSE event block — reset event type
           currentEventType = "message"
           continue
         }
 
-        if (trimmed.startsWith("event:")) {
-          currentEventType = trimmed.slice(6).trim()
+        if (normalizedLine.startsWith("event:")) {
+          currentEventType = normalizedLine.slice(6).trim()
           continue
         }
 
-        if (trimmed.startsWith("data:")) {
-          const payload = trimmed.slice(5).trim()
+        if (normalizedLine.startsWith("data:")) {
+          // SSE permits one optional U+0020 after the field colon. Remove
+          // only that framing space; preserve every character from the LLM.
+          const rawPayload = normalizedLine.slice(5)
+          const payload = rawPayload.startsWith(" ") ? rawPayload.slice(1) : rawPayload
 
           if (payload === "[DONE]") return
 
@@ -173,6 +181,12 @@ export const chatApi = {
             }
           } else if (currentEventType === "error") {
             yield { type: "error", data: payload }
+          } else if (currentEventType === "token") {
+            try {
+              yield { type: "token", data: JSON.parse(payload) as string }
+            } catch {
+              yield { type: "token", data: payload }
+            }
           } else {
             // Regular token
             yield { type: "token", data: payload }

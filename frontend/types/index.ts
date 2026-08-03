@@ -4,7 +4,8 @@ export interface User {
   name: string
   email: string
   avatar?: string
-  plan: "free" | "pro" | "enterprise"
+  // Subscription plans are not part of the current backend account model.
+  plan?: "free" | "pro" | "enterprise"
   createdAt: string
 }
 

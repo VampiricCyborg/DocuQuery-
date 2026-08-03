@@ -2,7 +2,7 @@
 SSE stream utilities.
 
 Protocol (matches the existing frontend expectations):
-  - Each token:   data: <token text>\\n\\n
+  - Each token:   event: token\\ndata: <JSON token text>\\n\\n
   - Citations:    event: citations\\ndata: <json>\\n\\n
   - Done:         data: [DONE]\\n\\n
   - Error:        event: error\\ndata: <message>\\n\\n
@@ -18,7 +18,8 @@ from app.llm.models import CitationRecord
 
 
 def token_event(token: str) -> str:
-    return f"data: {token}\n\n"
+    # JSON keeps newlines and leading/trailing spaces unambiguous inside SSE.
+    return f"event: token\ndata: {json.dumps(token, ensure_ascii=False)}\n\n"
 
 
 def citations_event(citations: list[CitationRecord]) -> str:

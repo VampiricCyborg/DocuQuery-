@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import type { Conversation, Message, ChatMode, Citation } from "@/types"
 import { generateId } from "@/lib/utils"
 import { chatApi } from "@/services/api"
@@ -31,7 +32,7 @@ interface ChatStore {
   activeConversation: () => Conversation | undefined
 }
 
-export const useChatStore = create<ChatStore>()((set, get) => ({
+export const useChatStore = create<ChatStore>()(persist((set, get) => ({
       conversations: [],
       activeId: null,
       activeMode: "docuquery",
@@ -39,9 +40,17 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
       sidebarOpen: true,
 
       setConversations: (conversations) => set({ conversations }),
-      setActiveId: (activeId) => set({ activeId }),
+      setActiveId: (activeId) => set(state => ({
+        activeId,
+        activeMode: state.conversations.find(c => c.id === activeId)?.mode ?? state.activeMode,
+      })),
       toggleSidebar: () => set(s => ({ sidebarOpen: !s.sidebarOpen })),
-      setMode: (activeMode) => set({ activeMode }),
+      setMode: (activeMode) => set(state => ({
+        activeMode,
+        conversations: state.activeId
+          ? state.conversations.map(c => c.id === state.activeId ? { ...c, mode: activeMode } : c)
+          : state.conversations,
+      })),
 
       activeConversation: () => {
         const { conversations, activeId } = get()
@@ -49,7 +58,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
       },
 
       addConversation: (c) =>
-        set(s => ({ conversations: [c, ...s.conversations], activeId: c.id })),
+        set(s => ({ conversations: [c, ...s.conversations], activeId: c.id, activeMode: c.mode })),
 
       deleteConversation: (id) =>
         set(s => ({
@@ -86,8 +95,10 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         })),
 
       sendMessage: async (content, attachments) => {
-        const { activeId, conversations, activeMode } = get()
+        const { activeId, conversations } = get()
         if (!activeId) return
+        const conversation = conversations.find(c => c.id === activeId)
+        const mode = conversation?.mode ?? get().activeMode
 
         const userMsg: Message = {
           id: generateId(),
@@ -155,7 +166,7 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         set({ isStreaming: true })
 
         try {
-          for await (const event of chatApi.stream(content, activeId, activeMode)) {
+          for await (const event of chatApi.stream(content, activeId, mode)) {
             if (event.type === "token") {
               appendToken(event.data)
             } else if (event.type === "citations") {
@@ -199,6 +210,12 @@ export const useChatStore = create<ChatStore>()((set, get) => ({
         }))
         await get().sendMessage(lastUser.content)
       },
+  }), {
+    name: "docuquery-chat-store",
+    partialize: state => ({
+      conversations: state.conversations,
+      activeId: state.activeId,
+      activeMode: state.activeMode,
+      sidebarOpen: state.sidebarOpen,
+    }),
   }))
-      // Only persist conversations and UI prefs — don't persist streaming state
-//))

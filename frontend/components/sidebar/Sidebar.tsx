@@ -1,6 +1,6 @@
 "use client"
 import { useState, useMemo, useRef, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Plus, Search, Pin, Trash2, MessageSquare, ChevronLeft, Pencil, Check, X } from "lucide-react"
 import { useChatStore } from "@/stores/chat.store"
 import { Button } from "@/components/ui/Button"
@@ -9,8 +9,10 @@ import { Tooltip } from "@/components/ui/Tooltip"
 import { cn, truncate, generateId } from "@/lib/utils"
 import { UserMenu } from "./UserMenu"
 import { NavLinks } from "./NavLinks"
-import type { Conversation, ChatMode } from "@/types"
+import type { Conversation } from "@/types"
 import toast from "react-hot-toast"
+import Link from "next/link"
+import { getDefaultChatMode } from "@/stores/settings.store"
 
 // ─── Time grouping helpers ────────────────────────────────────────────────────
 
@@ -39,7 +41,7 @@ export function Sidebar() {
   const {
     conversations, activeId, sidebarOpen,
     setActiveId, addConversation, deleteConversation,
-    togglePin, toggleSidebar, activeMode,
+    togglePin, toggleSidebar,
   } = useChatStore()
   const [search, setSearch] = useState("")
 
@@ -68,7 +70,7 @@ export function Sidebar() {
       id: generateId(),
       title: "New Chat",
       messages: [],
-      mode: activeMode,
+      mode: getDefaultChatMode(),
       pinned: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -115,7 +117,7 @@ export function Sidebar() {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-neutral-800">
-        <span className="text-sm font-semibold text-white tracking-tight">DocuQuery</span>
+        <Link href="/" aria-label="DocuQuery home" className="cursor-pointer rounded text-sm font-semibold text-white tracking-tight hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500">DocuQuery</Link>
         <div className="flex items-center gap-1">
           <Tooltip content="New chat (Ctrl+K)">
             <Button variant="ghost" size="icon" onClick={handleNew}>

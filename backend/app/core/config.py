@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
 
+    # Authentication. Set a strong value in Railway/Vercel environments.
+    auth_secret: str = "dev-only-change-me"
+    auth_cookie_name: str = "docuquery_session"
+    auth_session_days: int = 30
+    # Production-safe default for Vercel -> Railway cross-site requests.
+    # Set AUTH_COOKIE_SECURE=false for local http development.
+    auth_cookie_secure: bool = True
+
     # Live web search (used by Hybrid mode only)
     tavily_api_key: str = ""
     tavily_max_results: int = 5
