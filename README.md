@@ -4,7 +4,9 @@
 
 > A production-grade, full-stack AI assistant platform for private document fleets — featuring real-time streaming, intelligent document ingestion, vector search, LLM-powered answers, and voice I/O.
 
-**Last Updated:** July 31, 2026
+**Last Updated:** August 3, 2026
+
+**V1 status:** The first focused production-hardening pass is complete. The current V1 includes backend-backed authentication sessions, lossless chat streaming, persistent client-side conversations, per-conversation chat modes, auth-aware navigation, working profile menus, and a functional settings interface.
 
 ## Current Product Flow
 
@@ -16,7 +18,7 @@
    - **LLM** — general AI conversation without document retrieval.
    - **Hybrid** — combines uploaded documents, general LLM reasoning, and optional live web search.
 
-The frontend uses the existing dark, glassmorphism-inspired DocuQuery visual language with responsive dashboard, files, chat, agents, and settings views.
+The frontend uses the existing dark, glassmorphism-inspired DocuQuery visual language with responsive dashboard, files, chat, agents, settings, and profile views.
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.1.0-blue?style=flat-square)
@@ -28,7 +30,7 @@ The frontend uses the existing dark, glassmorphism-inspired DocuQuery visual lan
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)
 ![pgvector](https://img.shields.io/badge/pgvector-0.5.0-blueviolet?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-71%20passing-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-backend%20covered-brightgreen?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
 
 ---
@@ -58,9 +60,10 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | 4 | Retrieval Engine | ✅ Complete |
 | 5 | LLM Integration & Streaming | ✅ Complete |
 | — | Pre-launch Hardening | ✅ Complete |
+| — | V1 Auth, Navigation & Chat UX Hardening | ✅ Complete |
 | 6 | Hybrid Retrieval + BM25 | ⏳ Planned |
 | 7 | Reranking | ⏳ Planned |
-| 8 | Authentication & RBAC | ⏳ Planned |
+| 8 | Authentication & RBAC | 🔄 Authentication complete; RBAC planned |
 | 9 | Agentic RAG | ⏳ Planned |
 | 10 | Multimodal RAG | ⏳ Planned |
 
@@ -76,6 +79,7 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | 📊 **Processing Status** | `uploaded → processing → indexed → failed` lifecycle | ✅ |
 | 🤖 **RAG Chat** | Grounded answers from your documents, never hallucinated | ✅ |
 | 🔴 **Streaming Responses** | Token-by-token SSE streaming with citations | ✅ |
+| 🧾 **Lossless Markdown Streaming** | Preserves token whitespace, paragraphs, lists, tables, code, and formatting | ✅ |
 | 🔌 **Multi-Provider LLM** | Groq, OpenAI, Anthropic, Gemini, Ollama — swap via config | ✅ |
 | 📎 **Citations** | Every answer links back to source document, page, chunk | ✅ |
 | 🛡️ **Rate Limiting** | Per-IP limits on upload and chat endpoints | ✅ |
@@ -83,8 +87,12 @@ Unlike generic chatbots, DocuQuery is purpose-built for document intelligence. I
 | 🤖 **AI Agent Selector** | Switch between specialized agents per conversation | ✅ UI |
 | 🎙️ **Voice Input** | Web Speech API with animated waveform | ✅ UI |
 | 📌 **Chat Management** | Pin, search, delete, auto-title conversations | ✅ UI |
+| 💾 **Conversation Persistence** | Conversations, messages, citations, timestamps, and modes survive refresh | ✅ local browser persistence |
+| 🎛️ **Chat Modes** | DocuQuery, LLM, and Hybrid share one mode type and backend request path | ✅ |
 | 📊 **Usage Dashboard** | Stats, activity feed, file manager | ✅ UI |
-| 🔐 **Auth Flow** | Sign in, sign up, forgot-password (JWT in Phase 8) | ✅ UI |
+| 🔐 **Auth Flow** | Signup/login, signed HTTP-only sessions, hydration, logout, and protected routes | ✅ |
+| 👤 **Profile & Settings** | Real account details, profile menu, preferences, account controls, and danger-zone placeholder | ✅ |
+| 🏠 **Home Navigation** | Logo/brand navigation preserves the active session and returns to `/` | ✅ |
 | ⌨️ **Keyboard Shortcuts** | `Ctrl+K` new chat, extensible shortcut system | ✅ |
 | 🌙 **Dark UI** | Modern dark-first design, mobile responsive | ✅ |
 
@@ -135,12 +143,12 @@ The backend supports three mode-aware chat paths. Hybrid mode optionally calls T
 
 ```
 DocuQuery/
-├── frontend/                   # Next.js 15 App Router
+├── frontend/                   # Next.js 16 App Router
 │   ├── app/
 │   │   ├── (auth)/             # login, signup, forgot-password
-│   │   └── (dashboard)/        # chat, dashboard, files, agents, settings
+│   │   └── (dashboard)/        # chat, dashboard, files, agents, settings, profile
 │   ├── components/             # UI component library
-│   ├── stores/                 # Zustand state stores
+│   ├── stores/                 # Zustand auth, chat, UI, file, and settings stores
 │   ├── services/
 │   │   ├── api.ts              # Real backend API client
 │   │   └── mock.ts             # Mock data for local dev without backend
@@ -154,10 +162,10 @@ DocuQuery/
     │   │   ├── documents.py    # CRUD + chunk inspector
     │   │   ├── chat.py         # Full RAG pipeline + SSE streaming
     │   │   ├── retrieve.py     # POST /retrieve — retrieval only
-    │   │   ├── auth.py         # Stub (Phase 8)
+    │   │   ├── auth.py         # Signup, login, session lookup, logout
     │   │   └── dependencies.py
     │   ├── core/               # Config, logging, security, middleware
-    │   ├── database/           # Models, session, base, migrations
+    │   ├── database/           # Models, session, and database base
     │   ├── ingestion/          # Full ingestion pipeline
     │   │   ├── parser.py       # PDF / DOCX / TXT / MD extraction
     │   │   ├── cleaner.py      # Text normalization
@@ -184,7 +192,7 @@ DocuQuery/
     │   ├── schemas/            # Pydantic request/response models
     │   └── services/           # Business logic
     ├── migrations/             # Alembic migrations
-    ├── tests/                  # pytest test suite (68 tests)
+    ├── tests/                  # pytest suite, including auth and streaming regressions
     ├── Dockerfile
     ├── docker-compose.yml
     ├── railway.json
@@ -268,6 +276,13 @@ DEBUG=false
 # CORS — comma-separated allowed origins
 ALLOWED_ORIGINS=http://localhost:3000
 
+# Authentication
+# Use a long random value in production. Set false for local http development.
+AUTH_SECRET=<long-random-session-signing-secret>
+AUTH_COOKIE_NAME=docuquery_session
+AUTH_SESSION_DAYS=30
+AUTH_COOKIE_SECURE=false
+
 # Rate limiting
 RATE_LIMIT_UPLOAD=10/minute
 RATE_LIMIT_CHAT=30/minute
@@ -324,7 +339,10 @@ TAVILY_SEARCH_DEPTH=basic
 | `DELETE` | `/documents/{id}` | Delete document and all its chunks |
 | `POST` | `/retrieve` | Vector similarity search — returns chunks + context |
 | `POST` | `/chat` | Full RAG pipeline — streams answer + citations |
-| `GET` | `/auth/me` | Auth endpoint _(stub — wired in Phase 8)_ |
+| `POST` | `/auth/signup` | Create an account and establish an HTTP-only session |
+| `POST` | `/auth/login` | Authenticate and establish an HTTP-only session |
+| `GET` | `/auth/me` | Return the authenticated user for frontend hydration |
+| `POST` | `/auth/logout` | Clear the authenticated session cookie |
 
 Interactive docs available at `/docs` when `DEBUG=true`.
 
@@ -345,6 +363,8 @@ Send a `mode` value with `POST /chat`:
 | `docuquery` | Searches indexed uploaded documents only | Document, page, and chunk citations |
 | `llm` | Skips document retrieval | No document citations |
 | `hybrid` | Searches documents and, when configured, Tavily live web search | Document citations plus linked web sources |
+
+Authentication endpoints use a signed, HTTP-only cookie. Passwords are stored as PBKDF2-SHA256 hashes; passwords and session tokens are never persisted in the frontend. The `users` table is created by the Alembic migration `b8d3f1e8f4c2_add_users.py`.
 
 ---
 
@@ -411,8 +431,22 @@ Construct prompt  (versioned system prompt + context + question)
 LLM generation  (Groq / OpenAI / Anthropic / Gemini / Ollama)
      │
      ▼
-Stream response  (SSE: token events → citations event → [DONE])
+Stream response  (SSE: lossless JSON token events → citations event → [DONE])
 ```
+
+The streaming client removes only the single SSE framing space after `data:`. It does not trim or normalize model chunks, so whitespace between streamed tokens, paragraph breaks, Markdown lists, code blocks, tables, and inline formatting remain intact.
+
+### Conversation state
+
+The frontend persists conversations in the browser through the chat store. Each conversation retains its ID, title, messages, timestamps, citations, pinned state, and selected mode. Opening an existing conversation restores its mode; changing the mode updates that conversation and affects subsequent requests. Server-side conversation memory and cross-device synchronization are not part of V1 because the existing backend `conversation_id` field remains reserved for that future phase.
+
+### Frontend access and navigation
+
+- `/` is publicly accessible for authenticated and unauthenticated users.
+- `/dashboard`, `/chat`, `/files`, `/agents`, `/settings`, `/profile`, and `/mode-select` require an active session.
+- The DocuQuery logo navigates to `/` with client-side navigation and does not log the user out.
+- The profile/avatar menu uses the authenticated user’s real name and email and provides Profile, Settings, and Sign out actions.
+- The mode selector is keyboard accessible, closes on Escape/outside click, and opens through a portal so it is not clipped by the chat composer.
 
 Response format:
 ```json
@@ -435,6 +469,8 @@ Response format:
 2. Add PostgreSQL service (use `pgvector/pgvector:pg16` image)
 3. Set environment variables in Railway dashboard
 4. Run migrations: `python -m alembic upgrade head`
+
+For a cross-origin Vercel frontend and Railway backend, set `AUTH_COOKIE_SECURE=true` and configure `ALLOWED_ORIGINS` with the exact frontend origin. For local `http://localhost` development, use `AUTH_COOKIE_SECURE=false`.
 
 ### Frontend — Vercel
 
@@ -470,7 +506,8 @@ Then redeploy.
 - [x] **Pre-launch** — Security headers, rate limiting, production hardening
 - [ ] **Phase 6** — Hybrid retrieval + BM25 + Reciprocal Rank Fusion
 - [ ] **Phase 7** — Reranking (BGE cross-encoder)
-- [ ] **Phase 8** — JWT authentication + RBAC
+- [x] **V1** — Signed HTTP-only authentication sessions, protected frontend routes, profile menu, and logout
+- [ ] **Phase 8** — RBAC and server-side authorization boundaries
 - [ ] **Phase 9** — Agentic RAG (LangGraph, multi-agent orchestration)
 - [ ] **Phase 10** — Multimodal RAG (OCR, images, tables)
 
@@ -483,9 +520,25 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-Current test suite: **71 tests, 0 failures**
+The backend suite covers text cleaning, document parsing, chunking, metadata extraction, pipeline orchestration, retrieval scoring, citations, context building, filters, LLM prompt construction, provider abstraction, response generation, mode-aware streaming, password hashing, signed-session validation, and failure paths.
 
-Covers: text cleaner, document parser, chunker, metadata extraction, pipeline orchestration, retrieval scoring, citations, context builder, filters, LLM prompt construction, provider abstraction, response generator, streaming, failure paths.
+Frontend validation commands:
+
+```bash
+cd frontend
+npx tsc --noEmit
+npm run lint
+npm run build
+```
+
+Backend validation:
+
+```bash
+cd backend
+pytest -q
+```
+
+The V1 validation run passed TypeScript, lint, production build, and all backend tests that did not depend on the local Windows `pytest tmp_path` fixture. Three ingestion tests were blocked by an environment-level temporary-directory permission error, not by test assertions.
 
 ---
 
