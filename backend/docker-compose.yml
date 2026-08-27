@@ -4,6 +4,8 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD_URLENCODED}@db:5432/${POSTGRES_DB:-docuquery}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -18,8 +20,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-docuquery}
     # Do NOT expose DB port publicly — remove the ports block in production
-    # ports:
-    #   - "5433:5432"
+    ports:
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

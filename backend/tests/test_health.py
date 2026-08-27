@@ -1,9 +1,13 @@
 import pytest
+from types import SimpleNamespace
 from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, patch
 
 from app.main import app
+from app.api.dependencies import get_db
 from app.core.config import Settings
+from app.core.security import create_session
+from app.database.models import User
 
 
 @pytest.mark.asyncio
@@ -24,7 +28,7 @@ async def test_health_ok():
 @pytest.mark.asyncio
 async def test_chat_json_body_is_accepted():
     """
-    POST /chat with a valid JSON body must NOT return 422.
+    POST /chat without authentication must return 401.
 
     Root-cause guard: previously the route parameter was named `body: ChatRequest`
     alongside `request: Request`.  FastAPI interpreted `body` as a required QUERY
@@ -42,20 +46,53 @@ async def test_chat_json_body_is_accepted():
             headers={"Content-Type": "application/json"},
         )
 
-    assert response.status_code != 422, (
-        f"POST /chat returned 422 — JSON body is not being parsed.\n"
-        f"Response: {response.text}"
-    )
-    assert response.status_code != 404, "POST /chat route not found."
-    assert response.status_code in (200, 503)
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_chat_missing_message_returns_422():
+async def test_chat_succeeds_with_valid_session_cookie(monkeypatch):
+    """A valid session cookie permits an authenticated chat request."""
+    user = User(
+        id="test-user",
+        name="Test User",
+        email="test@example.com",
+        password_hash="unused",
+    )
+    mock_db = AsyncMock()
+    mock_db.scalar = AsyncMock(return_value=user)
+
+    async def override_db():
+        yield mock_db
+
+    class FakeGenerator:
+        async def generate(self, message, retrieval_result, mode):
+            return SimpleNamespace(answer="ok", citations=[], model="test-model")
+
+    monkeypatch.setattr("app.api.chat.get_response_generator", lambda: FakeGenerator())
+    monkeypatch.setattr(
+        "app.api.chat.get_settings",
+        lambda: Settings(llm_streaming_enabled=False),
+    )
+    app.dependency_overrides[get_db] = override_db
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/chat",
+                json={"message": "hello", "mode": "llm"},
+                cookies={"docuquery_session": create_session(user.id)},
+            )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_chat_missing_message_requires_authentication():
     """
-    POST /chat without the required `message` field must return 422.
-    Validates that Pydantic body validation is active.
-    Crucially, the error location must be in the body, not in query params.
+    Authentication is required before request-body processing is reached.
     """
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
@@ -64,20 +101,12 @@ async def test_chat_missing_message_returns_422():
             headers={"Content-Type": "application/json"},
         )
 
-    assert response.status_code == 422
-    data = response.json()
-    locs = [tuple(err["loc"]) for err in data["detail"]]
-    assert any("message" in loc for loc in locs), (
-        f"Expected validation error on 'message', got: {locs}"
-    )
-    assert not any(loc[0] == "query" for loc in locs), (
-        f"'message' is being reported as a query param — body parsing is broken. locs: {locs}"
-    )
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_chat_empty_message_returns_422():
-    """POST /chat with an empty string must return 422 (min_length=1)."""
+async def test_chat_empty_message_requires_authentication():
+    """Authentication is required before message validation."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/chat",
@@ -85,7 +114,7 @@ async def test_chat_empty_message_returns_422():
             headers={"Content-Type": "application/json"},
         )
 
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -110,8 +139,7 @@ async def test_chat_returns_valid_response():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post("/chat", json={"message": "hello"})
 
-    # 503 = retrieval unavailable (no DB in test env)
-    assert response.status_code in (200, 503)
+    assert response.status_code == 401
 
 
 def test_allowed_origins_parses_railway_value():

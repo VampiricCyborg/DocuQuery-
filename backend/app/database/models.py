@@ -35,6 +35,9 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     filename: Mapped[str] = mapped_column(String, nullable=False)
     original_filename: Mapped[str] = mapped_column(String, nullable=False)
     file_type: Mapped[str] = mapped_column(String(10), nullable=False)

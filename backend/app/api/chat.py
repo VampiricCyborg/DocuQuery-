@@ -16,7 +16,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_db
+from app.api.dependencies import get_current_user, get_db
+from app.database.models import User
 from app.schemas.chat import ChatRequest, ChatResponse, CitationOut
 from app.retrieval.retrieval_pipeline import RetrievalResult
 from app.retrieval import run_retrieval_pipeline
@@ -42,6 +43,7 @@ router = APIRouter()
 async def chat(
     request: Request,
     chat_request: Annotated[ChatRequest, Body(...)],
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -64,6 +66,7 @@ async def chat(
             retrieval_result = await run_retrieval_pipeline(
                 query=chat_request.message,
                 db=db,
+                user_id=current_user.id,
                 top_k=chat_request.top_k,
                 filters=None,
             )

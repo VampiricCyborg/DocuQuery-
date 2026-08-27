@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-async def save_document(file: UploadFile, db: AsyncSession) -> Document:
+async def save_document(file: UploadFile, db: AsyncSession, user_id: str) -> Document:
     """Validate, persist to disk, and record in DB with UPLOADED status."""
     ext = Path(file.filename or "").suffix.lstrip(".").lower()
     if ext not in settings.allowed_ext_set:
@@ -34,6 +34,7 @@ async def save_document(file: UploadFile, db: AsyncSession) -> Document:
         await f.write(content)
 
     doc = Document(
+        user_id=user_id,
         filename=unique_name,
         original_filename=file.filename or unique_name,
         file_type=ext,
@@ -70,13 +71,19 @@ async def update_document_status(
     # Intentionally no db.commit() here — caller is responsible for committing.
 
 
-async def list_documents(db: AsyncSession) -> list[Document]:
-    result = await db.execute(select(Document).order_by(Document.upload_time.desc()))
+async def list_documents(db: AsyncSession, user_id: str) -> list[Document]:
+    result = await db.execute(
+        select(Document)
+        .where(Document.user_id == user_id)
+        .order_by(Document.upload_time.desc())
+    )
     return list(result.scalars().all())
 
 
-async def delete_document(doc_id: str, db: AsyncSession) -> None:
-    result = await db.execute(select(Document).where(Document.id == doc_id))
+async def delete_document(doc_id: str, db: AsyncSession, user_id: str) -> None:
+    result = await db.execute(
+        select(Document).where(Document.id == doc_id, Document.user_id == user_id)
+    )
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
@@ -85,6 +92,6 @@ async def delete_document(doc_id: str, db: AsyncSession) -> None:
     if path.exists():
         path.unlink()
 
-    await db.execute(delete(Document).where(Document.id == doc_id))
+    await db.execute(delete(Document).where(Document.id == doc_id, Document.user_id == user_id))
     await db.commit()
     logger.info("Deleted document %s", doc_id)

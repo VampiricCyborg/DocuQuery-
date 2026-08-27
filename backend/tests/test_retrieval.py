@@ -223,7 +223,7 @@ async def test_pipeline_returns_result():
         mock_settings.return_value = settings
 
         from app.retrieval.retrieval_pipeline import run_retrieval_pipeline
-        result = await run_retrieval_pipeline("What is the leave policy?", mock_db)
+        result = await run_retrieval_pipeline("What is the leave policy?", mock_db, "test-user")
 
         assert len(result.chunks) == 1
         assert result.chunks[0].similarity > 0.9
@@ -251,7 +251,7 @@ async def test_pipeline_raises_no_results_when_all_below_threshold():
 
         from app.retrieval.retrieval_pipeline import run_retrieval_pipeline
         with pytest.raises(NoResultsError):
-            await run_retrieval_pipeline("obscure query", mock_db)
+            await run_retrieval_pipeline("obscure query", mock_db, "test-user")
 
 
 @pytest.mark.asyncio
@@ -273,4 +273,4 @@ async def test_pipeline_no_results_when_search_empty():
 
         from app.retrieval.retrieval_pipeline import run_retrieval_pipeline
         with pytest.raises(NoResultsError):
-            await run_retrieval_pipeline("empty corpus query", mock_db)
+            await run_retrieval_pipeline("empty corpus query", mock_db, "test-user")

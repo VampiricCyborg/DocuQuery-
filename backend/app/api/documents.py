@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_current_user
 from app.database.session import get_db
 from app.database.models import Document, DocumentChunk
+from app.database.models import User
 from app.schemas import DocumentOut
 from app.schemas.document import DocumentChunkOut
 from app.services import list_documents, delete_document
@@ -12,15 +14,24 @@ router = APIRouter()
 
 
 @router.get("/documents", response_model=list[DocumentOut])
-async def get_documents(db: AsyncSession = Depends(get_db)):
+async def get_documents(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Return all uploaded documents with their processing status."""
-    return await list_documents(db)
+    return await list_documents(db, current_user.id)
 
 
 @router.get("/documents/{doc_id}", response_model=DocumentOut)
-async def get_document(doc_id: str, db: AsyncSession = Depends(get_db)):
+async def get_document(
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Return a single document by ID."""
-    result = await db.execute(select(Document).where(Document.id == doc_id))
+    result = await db.execute(
+        select(Document).where(Document.id == doc_id, Document.user_id == current_user.id)
+    )
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
@@ -28,11 +39,17 @@ async def get_document(doc_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/documents/{doc_id}/chunks", response_model=list[DocumentChunkOut])
-async def get_document_chunks(doc_id: str, db: AsyncSession = Depends(get_db)):
+async def get_document_chunks(
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Return all indexed chunks for a document (useful for debugging ingestion)."""
     result = await db.execute(
         select(DocumentChunk)
+        .join(Document, DocumentChunk.document_id == Document.id)
         .where(DocumentChunk.document_id == doc_id)
+        .where(Document.user_id == current_user.id)
         .order_by(DocumentChunk.chunk_index)
     )
     chunks = result.scalars().all()
@@ -42,7 +59,11 @@ async def get_document_chunks(doc_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/documents/{doc_id}/debug")
-async def debug_document(doc_id: str, db: AsyncSession = Depends(get_db)):
+async def debug_document(
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Diagnostic endpoint — returns the document's indexing state:
     status, total_chunks recorded, actual chunk rows in DB,
@@ -51,21 +72,30 @@ async def debug_document(doc_id: str, db: AsyncSession = Depends(get_db)):
     Use this to verify that a document was successfully indexed before querying it.
     """
     # Fetch document
-    doc_result = await db.execute(select(Document).where(Document.id == doc_id))
+    doc_result = await db.execute(
+        select(Document).where(Document.id == doc_id, Document.user_id == current_user.id)
+    )
     doc = doc_result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
 
     # Count actual chunk rows
     chunk_count_result = await db.execute(
-        select(func.count()).where(DocumentChunk.document_id == doc_id)
+        select(func.count())
+        .select_from(DocumentChunk)
+        .join(Document, DocumentChunk.document_id == Document.id)
+        .where(DocumentChunk.document_id == doc_id, Document.user_id == current_user.id)
     )
     actual_chunks = chunk_count_result.scalar_one()
 
     # Count chunks that have a non-null embedding
     embedded_count_result = await db.execute(
-        select(func.count()).where(
+        select(func.count())
+        .select_from(DocumentChunk)
+        .join(Document, DocumentChunk.document_id == Document.id)
+        .where(
             DocumentChunk.document_id == doc_id,
+            Document.user_id == current_user.id,
             DocumentChunk.embedding.is_not(None),
         )
     )
@@ -102,6 +132,10 @@ def _diagnose(status: str, actual_chunks: int, embedded_chunks: int) -> str:
 
 
 @router.delete("/documents/{doc_id}", status_code=204)
-async def remove_document(doc_id: str, db: AsyncSession = Depends(get_db)):
+async def remove_document(
+    doc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Delete a document and all its chunks (cascade)."""
-    await delete_document(doc_id, db)
+    await delete_document(doc_id, db, current_user.id)

@@ -1,7 +1,8 @@
 FROM python:3.13-slim AS base
 
 # System deps: libmupdf for PyMuPDF, libgomp for sentence-transformers FAISS
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*

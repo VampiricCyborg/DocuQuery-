@@ -8,7 +8,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_db
+from app.api.dependencies import get_current_user, get_db
+from app.database.models import User
 from app.schemas.retrieval import RetrieveRequest, RetrieveResponse, ChunkResponse
 from app.retrieval import run_retrieval_pipeline
 from app.retrieval.filters import RetrievalFilter
@@ -26,6 +27,7 @@ router = APIRouter()
 @router.post("/retrieve", response_model=RetrieveResponse, status_code=status.HTTP_200_OK)
 async def retrieve(
     body: RetrieveRequest,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> RetrieveResponse:
     # Parse optional filters dict into the typed model
@@ -38,6 +40,7 @@ async def retrieve(
         result = await run_retrieval_pipeline(
             query=body.query,
             db=db,
+            user_id=current_user.id,
             top_k=body.top_k,
             filters=filters,
         )

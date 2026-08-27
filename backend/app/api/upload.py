@@ -3,7 +3,9 @@ import logging
 from fastapi import APIRouter, Depends, UploadFile, File, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_current_user
 from app.database.session import get_db
+from app.database.models import User
 from app.schemas import DocumentOut
 from app.services.document_service import save_document
 from app.ingestion.pipeline import run_ingestion_pipeline
@@ -27,10 +29,11 @@ async def upload_file(
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a document — returns immediately; ingestion runs in background."""
-    doc = await save_document(file, db)
+    doc = await save_document(file, db, current_user.id)
     background_tasks.add_task(
         _run_pipeline_with_own_session,
         doc.id,

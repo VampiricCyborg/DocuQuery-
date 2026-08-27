@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.database.models import Document
 from app.retrieval.embedding_query import embed_query
 from app.retrieval.filters import RetrievalFilter, build_where_clauses
 from app.retrieval.vector_search import similarity_search
@@ -50,6 +51,7 @@ class RetrievalResult:
 async def run_retrieval_pipeline(
     query: str,
     db: AsyncSession,
+    user_id: str,
     top_k: int | None = None,
     filters: RetrievalFilter | None = None,
 ) -> RetrievalResult:
@@ -76,6 +78,7 @@ async def run_retrieval_pipeline(
 
     # 2. Filters
     where_clauses = build_where_clauses(filters)
+    where_clauses.append(Document.user_id == user_id)
     logger.info("[retrieval] [2/4] Filter clauses built  count=%d", len(where_clauses))
 
     # 3. Vector search — fetch 2× top_k to give scoring room after dedup/threshold
